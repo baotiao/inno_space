@@ -39,12 +39,11 @@ static void usage()
 
 void ShowFILHeader(uint64_t page_num) {
 
+  printf("==========================block==========================\n");
   printf("FIL Header:\n");
   uint64_t offset = kPageSize * page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
-
-  printf("ret %d\n", ret);
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
   printf("Offset: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
@@ -52,7 +51,6 @@ void ShowFILHeader(uint64_t page_num) {
   printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
   printf("Page LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_LSN));
   printf("Page Type: %hu\n", mach_read_from_2(read_buf + FIL_PAGE_TYPE));
-  std::cout << mach_read_from_2(read_buf + FIL_PAGE_TYPE) << std::endl;
   printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
@@ -62,11 +60,11 @@ void ShowIndexHeader(uint64_t page_num) {
 
   int ret = pread(fd, read_buf, kPageSize, offset);
 
-  printf("Number of Directory Slots: %u\n", mach_read_from_2(read_buf + PAGE_HEADER));
-  printf("Garbage Space: %u\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
-  printf("Number of Records: %u\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
+  printf("Number of Directory Slots: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER));
+  printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
+  printf("Number of Records: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
   printf("Max Trx id: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_MAX_TRX_ID));
-  printf("Page level: %u\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
+  printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
 }
@@ -129,7 +127,9 @@ int main(int argc, char *argv[]) {
 
   posix_memalign((void**)&read_buf, kPageSize, kPageSize);
 
-  ShowFile();
+  if (show_file == true) {
+    ShowFile();
+  }
 
   ShowFILHeader(user_page);
 
