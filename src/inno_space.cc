@@ -21,7 +21,7 @@ char path[1024];
 int fd;
 uint64_t user_page = 0;
 
-char* read_buf;
+unsigned char* read_buf;
 
 static void usage()
 {
@@ -83,7 +83,7 @@ void ShowFile() {
 }
 
 int main(int argc, char *argv[]) {
-  if (argc <= 3) {
+  if (argc <= 2) {
     usage();
     exit(-1);
   }
