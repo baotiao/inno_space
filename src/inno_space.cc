@@ -21,7 +21,6 @@ static const uint32_t kPageSize = 16384;
 
 char path[1024];
 int fd;
-uint64_t user_page = 0;
 
 unsigned char* read_buf;
 
@@ -39,7 +38,7 @@ static void usage()
 
 
 
-void ShowFILHeader(uint64_t page_num) {
+void ShowFILHeader(uint32_t page_num) {
 
   printf("==========================block==========================\n");
   printf("FIL Header:\n");
@@ -60,7 +59,7 @@ void ShowFILHeader(uint64_t page_num) {
   printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
-void ShowIndexHeader(uint64_t page_num) {
+void ShowIndexHeader(uint32_t page_num) {
   printf("Index Header:\n");
   uint64_t offset = kPageSize * page_num;
 
@@ -88,15 +87,61 @@ void ShowFile() {
   }
 }
 
+void ModifyPage() {
+}
+
+void DeletePage(uint32_t page_num) {
+  printf("==========================DeletePage==========================\n");
+  uint64_t offset = kPageSize * page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  printf("CheckSum: %u\n", mach_read_from_4(read_buf));
+
+  uint32_t cc = buf_calc_page_crc32(read_buf, 0);
+  printf("crc %u\n", cc);
+  unsigned char prev_buf[16 * 1024];
+  unsigned char next_buf[16 * 1024];
+  uint32_t prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
+  uint32_t next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
+  pread(fd, prev_buf, kPageSize, kPageSize * prev_page);
+  pread(fd, next_buf, kPageSize, kPageSize * next_page);
+
+  
+  mach_write_to_4(prev_buf + FIL_PAGE_NEXT, next_page);
+  mach_write_to_4(next_buf + FIL_PAGE_PREV, prev_page);
+  printf("prev_page %u next_page %u\n", prev_page, next_page);
+
+  uint32_t prev_cc = buf_calc_page_crc32(prev_buf, 0);
+  uint32_t next_cc = buf_calc_page_crc32(next_buf, 0);
+
+  mach_write_to_4(prev_buf, prev_cc);
+  mach_write_to_4(next_buf, next_cc);
+
+  mach_write_to_4(prev_buf + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM,
+      prev_cc);
+
+  mach_write_to_4(next_buf + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM,
+      next_cc);
+
+  ret = pwrite(fd, prev_buf, kPageSize, kPageSize * prev_page);
+  pwrite(fd, next_buf, kPageSize, kPageSize * next_page);
+  
+  printf("modify ret %d\n");
+
+}
+
 int main(int argc, char *argv[]) {
   if (argc <= 2) {
     usage();
     exit(-1);
   }
 
+  uint32_t user_page = 0;
   bool path_opt = false;
   char c;
   bool show_file = true;
+  bool delete_page = false;
   while (-1 != (c = getopt(argc, argv, "hf:p:d:"))) {
     switch (c) {
       case 'f':
@@ -105,6 +150,11 @@ int main(int argc, char *argv[]) {
         break;
       case 'p':
         show_file = false;
+        user_page = std::atol(optarg);
+        break;
+      case 'd':
+        show_file = false;
+        delete_page = true;
         user_page = std::atoll(optarg);
         break;
       case 'h':
@@ -130,6 +180,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "[ERROR] Open %s failed: %s\n", path, strerror(errno));
     exit(1);
   }
+
   ut_crc32_init();
 
   posix_memalign((void**)&read_buf, kPageSize, kPageSize);
@@ -141,6 +192,10 @@ int main(int argc, char *argv[]) {
   ShowFILHeader(user_page);
 
   ShowIndexHeader(user_page);
+
+  if (delete_page) {
+    DeletePage(user_page);
+  }
 
   return 0;
 }
