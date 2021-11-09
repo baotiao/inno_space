@@ -51,4 +51,6 @@ pages, we store the compressed page control information in these 8 bytes. */
 
 const uint32_t FIL_PAGE_DATA = 38;
 
+constexpr uint32_t FIL_PAGE_END_LSN_OLD_CHKSUM = 8;
+
 #endif

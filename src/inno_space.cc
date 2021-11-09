@@ -13,6 +13,8 @@
 
 #include "include/fil.h"
 #include "include/page.h"
+#include "include/ut0crc32.h"
+#include "include/page_crc32.h"
 #include "mach_data.h"
 
 static const uint32_t kPageSize = 16384;
@@ -46,6 +48,10 @@ void ShowFILHeader(uint64_t page_num) {
   int ret = pread(fd, read_buf, kPageSize, offset);
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
+
+  uint32_t cc = buf_calc_page_crc32(read_buf, 0);
+  printf("crc %u\n", cc);
+
   printf("Offset: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
   printf("Previous Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_PREV));
   printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
@@ -124,6 +130,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "[ERROR] Open %s failed: %s\n", path, strerror(errno));
     exit(1);
   }
+  ut_crc32_init();
 
   posix_memalign((void**)&read_buf, kPageSize, kPageSize);
 

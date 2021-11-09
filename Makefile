@@ -1,13 +1,14 @@
 
 CXX = g++
-CXXFLAGS = -Wall -W -DDEBUG -g -O2
+CXXFLAGS = -Wall -W -DDEBUG -g -O2 -std=c++11
 OBJECT = inno
 SRC_DIR = src
 
 LIB_PATH = -L./
 LIBS =
 
-INCLUDE_PATH = -I./
+INCLUDE_PATH = -I./ \
+							 -I./include/ \
 
 .PHONY: all clean
 
