@@ -42,16 +42,19 @@ void ShowFILHeader(uint32_t page_num) {
 
   printf("==========================block==========================\n");
   printf("FIL Header:\n");
-  uint64_t offset = kPageSize * page_num;
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret != 0) {
+    printf("ShowFILHeader read error %d\n", ret);
+  }
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
 
   uint32_t cc = buf_calc_page_crc32(read_buf, 0);
   printf("crc %u\n", cc);
 
-  printf("Offset: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
+  printf("Page number: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
   printf("Previous Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_PREV));
   printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
   printf("Page LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_LSN));
@@ -61,10 +64,13 @@ void ShowFILHeader(uint32_t page_num) {
 
 void ShowIndexHeader(uint32_t page_num) {
   printf("Index Header:\n");
-  uint64_t offset = kPageSize * page_num;
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
 
+  if (ret != 0) {
+    printf("ShowIndexHeader read error %d\n", ret);
+  }
   printf("Number of Directory Slots: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER));
   printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
   printf("Number of Records: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
@@ -76,7 +82,10 @@ void ShowIndexHeader(uint32_t page_num) {
 
 void ShowFile() {
   struct stat stat_buf;
-  int rc = fstat(fd, &stat_buf);
+  int ret = fstat(fd, &stat_buf);
+  if (ret != 0) {
+    printf("ShowFile read error %d\n", ret);
+  }
   printf("File size %lu\n", stat_buf.st_size);
 
   int block_num = stat_buf.st_size / kPageSize;
@@ -87,12 +96,23 @@ void ShowFile() {
   }
 }
 
-void ModifyPage() {
+void UpdateCheckSum(uint32_t page_num) {
+  printf("==========================DeletePage==========================\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+  int ret = pread(fd, read_buf, kPageSize, offset);
+  printf("CheckSum: %u\n", mach_read_from_4(read_buf));
+
+  uint32_t cc = buf_calc_page_crc32(read_buf, 0);
+  printf("crc %u\n", cc);
+  mach_write_to_4(read_buf, cc);
+  mach_write_to_4(read_buf + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM, cc);
+  ret = pwrite(fd, read_buf, kPageSize, offset);
+  printf("UpdateCheckSum %u\n", ret);
 }
 
 void DeletePage(uint32_t page_num) {
   printf("==========================DeletePage==========================\n");
-  uint64_t offset = kPageSize * page_num;
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
 
@@ -124,10 +144,13 @@ void DeletePage(uint32_t page_num) {
   mach_write_to_4(next_buf + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM,
       next_cc);
 
-  ret = pwrite(fd, prev_buf, kPageSize, kPageSize * prev_page);
-  pwrite(fd, next_buf, kPageSize, kPageSize * next_page);
-  
-  printf("modify ret %d\n");
+  uint64_t prev_offset = (uint64_t)kPageSize * (uint64_t)prev_page;
+  ret = pwrite(fd, prev_buf, kPageSize, prev_offset);
+  printf("Delete prev page ret %u\n", ret);
+
+  uint64_t next_offset = (uint64_t)kPageSize * (uint64_t)next_page;
+  ret = pwrite(fd, next_buf, kPageSize, next_offset);
+  printf("Delete next page ret %u\n", ret);
 
 }
 
@@ -142,7 +165,8 @@ int main(int argc, char *argv[]) {
   char c;
   bool show_file = true;
   bool delete_page = false;
-  while (-1 != (c = getopt(argc, argv, "hf:p:d:"))) {
+  bool update_checksum = false;
+  while (-1 != (c = getopt(argc, argv, "hf:p:d:u:"))) {
     switch (c) {
       case 'f':
         snprintf(path, 1024, "%s", optarg);
@@ -155,7 +179,12 @@ int main(int argc, char *argv[]) {
       case 'd':
         show_file = false;
         delete_page = true;
-        user_page = std::atoll(optarg);
+        user_page = std::atol(optarg);
+        break;
+      case 'u':
+        show_file = false;
+        update_checksum = true;
+        user_page = std::atol(optarg);
         break;
       case 'h':
         usage();
@@ -172,9 +201,9 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
-  printf("File path %s path, page num %ld\n", path, user_page);
+  printf("File path %s path, page num %u\n", path, user_page);
 
-  printf("page num %ld\n", user_page);
+  printf("page num %u\n", user_page);
   fd = open(path, O_RDWR, 0644); 
   if (fd == -1) {
     fprintf(stderr, "[ERROR] Open %s failed: %s\n", path, strerror(errno));
@@ -195,6 +224,10 @@ int main(int argc, char *argv[]) {
 
   if (delete_page) {
     DeletePage(user_page);
+  }
+
+  if (update_checksum) {
+    UpdateCheckSum(user_page);
   }
 
   return 0;
