@@ -31,8 +31,13 @@ static void usage()
       "usage: inno [-hv] [-f test/t.ibd]\n"
       "\t-h                -- show this help\n"
       "\t-f test/t.ibd     -- ibd file \n"
-      "\t-p                -- page number \n"
+      "\t-p page_num       -- show page information \n"
+      "\t-u page_num       -- update page checksum \n"
+      "\t-d page_num       -- delete page \n"
+      "Example: \n"
+      "====================================================\n"
       "./inno -f ~/git/primary/dbs2250/test/t1.ibd -p 2\n"
+      "./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2\n"
       );
 }
 
