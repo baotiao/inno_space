@@ -129,13 +129,16 @@ void DeletePage(uint32_t page_num) {
   unsigned char next_buf[16 * 1024];
   uint32_t prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
   uint32_t next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
-  pread(fd, prev_buf, kPageSize, kPageSize * prev_page);
-  pread(fd, next_buf, kPageSize, kPageSize * next_page);
+  uint64_t prev_offset = (uint64_t)kPageSize * (uint64_t)prev_page;
+  uint64_t next_offset = (uint64_t)kPageSize * (uint64_t)next_page;
+  pread(fd, prev_buf, kPageSize, prev_offset);
+  pread(fd, next_buf, kPageSize, next_offset);
 
+
+  printf("prev_page %u next_page %u\n", prev_page, next_page);
   
   mach_write_to_4(prev_buf + FIL_PAGE_NEXT, next_page);
   mach_write_to_4(next_buf + FIL_PAGE_PREV, prev_page);
-  printf("prev_page %u next_page %u\n", prev_page, next_page);
 
   uint32_t prev_cc = buf_calc_page_crc32(prev_buf, 0);
   uint32_t next_cc = buf_calc_page_crc32(next_buf, 0);
@@ -149,11 +152,9 @@ void DeletePage(uint32_t page_num) {
   mach_write_to_4(next_buf + UNIV_PAGE_SIZE - FIL_PAGE_END_LSN_OLD_CHKSUM,
       next_cc);
 
-  uint64_t prev_offset = (uint64_t)kPageSize * (uint64_t)prev_page;
   ret = pwrite(fd, prev_buf, kPageSize, prev_offset);
   printf("Delete prev page ret %u\n", ret);
 
-  uint64_t next_offset = (uint64_t)kPageSize * (uint64_t)next_page;
   ret = pwrite(fd, next_buf, kPageSize, next_offset);
   printf("Delete next page ret %u\n", ret);
 
