@@ -15,6 +15,7 @@
 #include "include/page.h"
 #include "include/ut0crc32.h"
 #include "include/page_crc32.h"
+#include "include/fsp0fsp.h"
 #include "mach_data.h"
 
 static const uint32_t kPageSize = 16384;
@@ -160,6 +161,22 @@ void DeletePage(uint32_t page_num) {
 
 }
 
+void ShowExtent()
+{
+  printf("==========================extents==========================\n");
+  printf("FIL Header:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)0;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret != 0) {
+    printf("ShowFILHeader read error %d\n", ret);
+  }
+
+  for (int i = 0; i < 255; i++) {
+    printf("Extent i %d status: %u\n", i, mach_read_from_4(read_buf + FIL_PAGE_DATA + FSP_HEADER_SIZE + XDES_STATE + (i * 40)));
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc <= 2) {
     usage();
@@ -222,11 +239,13 @@ int main(int argc, char *argv[]) {
 
   if (show_file == true) {
     ShowFile();
+    ShowExtent();
+  } else {
+
+    ShowFILHeader(user_page);
+
+    ShowIndexHeader(user_page);
   }
-
-  ShowFILHeader(user_page);
-
-  ShowIndexHeader(user_page);
 
   if (delete_page) {
     DeletePage(user_page);
