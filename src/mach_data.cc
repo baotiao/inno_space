@@ -1,15 +1,19 @@
-#ifndef inno_space_mach_data_h
-#define inno_space_mach_data_h
 
-#include <stdint.h>
+#include "include/mach_data.h"
 
-#include "include/udef.h"
+/** The following function is used to fetch data from one byte.
+@param[in]	b	pointer to a byte to read
+@return ulint integer, >= 0, < 256 */
+uint8_t mach_read_from_1(const byte *b) {
+  ut_ad(b);
+  return ((uint8_t)(b[0]));
+}
 
-uint16_t mach_read_from_2(const unsigned char *b) {
+uint16_t mach_read_from_2(const byte *b) {
   return (((uint32_t)(b[0]) << 8) | (uint32_t)(b[1]));
 }
 
-uint32_t mach_read_from_4(const unsigned char *b) {
+uint32_t mach_read_from_4(const byte *b) {
   return ((static_cast<uint32_t>(b[0]) << 24) |
       (static_cast<uint32_t>(b[1]) << 16) |
       (static_cast<uint32_t>(b[2]) << 8) | static_cast<uint32_t>(b[3]));
@@ -18,7 +22,7 @@ uint32_t mach_read_from_4(const unsigned char *b) {
  * bytes. The most significant byte is at the lowest address.
  * @param[in]  b pointer to 8 bytes from where read
  * @return 64-bit integer */
-uint64_t mach_read_from_8(const unsigned char *b) {
+uint64_t mach_read_from_8(const byte *b) {
   uint64_t u64;
 
   u64 = mach_read_from_4(b);
@@ -51,13 +55,6 @@ void mach_write_to_2(byte *b, ulint n) {
   b[1] = (byte)(n);
 }
 
-/** The following function is used to fetch data from one byte.
-@param[in]	b	pointer to a byte to read
-@return ulint integer, >= 0, < 256 */
-uint8_t mach_read_from_1(const byte *b) {
-  ut_ad(b);
-  return ((uint8_t)(b[0]));
-}
 
 /** The following function is used to store data in 3 consecutive
 bytes. We store the most significant byte to the lowest address.
@@ -85,4 +82,3 @@ void mach_write_to_4(byte *b, ulint n) {
   b[3] = static_cast<byte>(n);
 }
 
-#endif

@@ -22,8 +22,9 @@ all: $(OBJECT)
 $(OBJECT): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(INCLUDE_PATH) $(LIB_PATH) $(LIBS)
 
-$(OBJS) : %.o : %.cc
+%.o : %.cc
 	$(CXX) $(CXXFLAGS) -c $< -o $@ $(INCLUDE_PATH)
 
 clean:
 	rm -rf $(OBJECT) ./a.out
+	rm -rf $(SRC_DIR)/*.o
