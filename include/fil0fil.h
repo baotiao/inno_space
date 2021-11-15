@@ -1,6 +1,6 @@
 
-#ifndef inno_space_fil_h
-#define inno_space_fil_h
+#ifndef inno_space_fil_fil_h
+#define inno_space_fil_fil_h
 
 
 /** The byte offsets on a file page for various variables. */

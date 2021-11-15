@@ -1,6 +1,6 @@
 
 #include "include/ut0crc32.h"
-#include "include/fil.h"
+#include "include/fil0fil.h"
 #include "include/fil0types.h"
 
 /** Calculates the CRC32 checksum of a page. The value is stored to the page

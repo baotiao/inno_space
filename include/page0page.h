@@ -1,8 +1,8 @@
 
-#ifndef inno_space_page_h
-#define inno_space_page_h
+#ifndef inno_space_page_page_h
+#define inno_space_page_page_h
 
-#include "include/fil.h"
+#include "include/fil0fil.h"
 
 /*			PAGE HEADER
         ===========

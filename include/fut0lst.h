@@ -35,7 +35,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "include/udef.h"
 
-#include "include/fil.h"
+#include "include/fil0fil.h"
 #include "include/fil0types.h"
 
 /* The C 'types' of base node and list node: these should be used to

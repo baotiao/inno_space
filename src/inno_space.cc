@@ -11,8 +11,8 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "include/fil.h"
-#include "include/page.h"
+#include "include/fil0fil.h"
+#include "include/page0page.h"
 #include "include/ut0crc32.h"
 #include "include/page_crc32.h"
 #include "include/fsp0fsp.h"
