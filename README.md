@@ -28,8 +28,49 @@ usage: inno [-hv] [-f test/t.ibd]
         -d page_num       -- delete page
 Example:
 ====================================================
-./inno -f ~/git/primary/dbs2250/test/t1.ibd -p 2
+```
+
+Show basic file space information
+
+└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type
+File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 0
+page num 0
+==========================Space Header==========================
+Space ID: 3
+Highest Page number: 9216
+Free limit Page Number: 8832
+FREE_FRAG page number: 61
+Next Seg ID: 9
+File size 150994944
+Find root page space_id 3 page_no 4
+Find root page space_id 3 page_no 7
+Find root page space_id 3 page_no 588
+
+Show specify page information
+
+└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type -p 10
+File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 10
+==========================block==========================
+FIL Header:
+CheckSum: 1187106543
+crc 1187106543
+Page number: 10
+Previous Page: 9
+Next Page: 12
+Page LSN: 35174063
+Page Type: 17855
+Flush LSN: 0
+Index Header:
+Number of Directory Slots: 18
+Garbage Space: 0
+Number of Records: 73
+Max Trx id: 0
+Page level: 0
+Index ID: 142
+
+Delete specify page
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
+
 ```
 
 ## Contact Us
