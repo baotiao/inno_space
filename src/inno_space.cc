@@ -50,8 +50,9 @@ void ShowFILHeader(uint32_t page_num) {
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
-  if (ret != 0) {
+  if (ret == -1) {
     printf("ShowFILHeader read error %d\n", ret);
+    return;
   }
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
@@ -73,8 +74,9 @@ void ShowIndexHeader(uint32_t page_num) {
 
   int ret = pread(fd, read_buf, kPageSize, offset);
 
-  if (ret != 0) {
+  if (ret == -1) {
     printf("ShowIndexHeader read error %d\n", ret);
+    return;
   }
   printf("Number of Directory Slots: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER));
   printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
@@ -88,8 +90,9 @@ void ShowIndexHeader(uint32_t page_num) {
 void ShowFile() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
-  if (ret != 0) {
+  if (ret == -1) {
     printf("ShowFile read error %d\n", ret);
+    return;
   }
   printf("File size %lu\n", stat_buf.st_size);
 
@@ -105,6 +108,10 @@ void UpdateCheckSum(uint32_t page_num) {
   printf("==========================DeletePage==========================\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
   int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret == -1) {
+    printf("UpdateCheckSum read error %d\n", ret);
+    return;
+  }
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
 
   uint32_t cc = buf_calc_page_crc32(read_buf, 0);
@@ -120,6 +127,10 @@ void DeletePage(uint32_t page_num) {
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret == -1) {
+    printf("DeletePage read error %d\n", ret);
+    return;
+  }
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
 
@@ -166,8 +177,8 @@ void ShowExtent()
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)0;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
-  if (ret != 0) {
-    printf("ShowFILHeader read error %d\n", ret);
+  if (ret == -1) {
+    printf("ShowExtent read error %d\n", ret);
   }
 
   uint32_t xdes_state;
@@ -239,8 +250,9 @@ void ShowSpacePageType() {
   printf("==========================space page type==========================\n");
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
-  if (ret != 0) {
+  if (ret == -1) {
     printf("ShowFile read error %d\n", ret);
+    return ;
   }
   printf("File size %lu\n", stat_buf.st_size);
 
@@ -273,6 +285,41 @@ void ShowSpacePageType() {
   printf("%d\t\t%d\t\t%d\t\t", st, ed, cnt);
   PrintPageType(prev_page_type);
   printf("\n");
+}
+
+void ShowSpaceHeader() {
+  printf("==========================Space Header==========================\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)0;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret == -1) {
+    printf("ShowSpaceHeader read error %d\n", ret);
+    return;
+  }
+
+  fsp_header_t *header;
+  header = FSP_HEADER_OFFSET + read_buf;
+
+  printf("Space ID: %u\n", mach_read_from_4(header + FSP_SPACE_ID));
+  printf("Highest Page number: %u\n", mach_read_from_4(header + FSP_SIZE));
+  printf("Free limit Page Number: %u\n", mach_read_from_4(header + FSP_FREE_LIMIT));
+  printf("FREE_FRAG page number: %u\n", mach_read_from_4(header + FSP_FRAG_N_USED));
+  printf("Next Seg ID: %lu\n", mach_read_from_8(header + FSP_SEG_ID));
+
+}
+
+void ShowSpaceIndexs() {
+  printf("==========================block==========================\n");
+  printf("Space Indexs:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)FIL_PAGE_INODE;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret == -1) {
+    printf("ShowSpaceIndexs read error %d\n", ret);
+    return;
+  }
+
+  // seg_id = mach_read_from_8(space_header + FSP_SEG_ID);
 }
 
 int main(int argc, char *argv[]) {
@@ -342,8 +389,11 @@ int main(int argc, char *argv[]) {
   if (show_file == true) {
     // ShowFile();
     // ShowExtent();
+    ShowSpaceHeader();
     if (strcmp(command, "space-page-type") == 0) {
       ShowSpacePageType();
+    } else if (strcmp(command, "space-indexes") == 0) {
+      ShowSpaceIndexs();
     }
 
   } else {

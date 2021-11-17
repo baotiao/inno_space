@@ -3,7 +3,19 @@
 
 #include "include/udef.h"
 
+#include "include/fil0types.h"
 #include "include/fut0lst.h"
+
+/* The data structures in files are defined just as byte strings in C */
+typedef byte fsp_header_t;
+typedef byte xdes_t;
+
+/** Offset of the space header within a file page */
+#define FSP_HEADER_OFFSET FIL_PAGE_DATA
+
+/** The number of bytes required to store SDI root page number(4)
+ * and SDI version(4) at Page 0 */
+#define FSP_SDI_HEADER_LEN 8
 
 /*			SPACE HEADER
                         ============
