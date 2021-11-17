@@ -7,5 +7,6 @@
 #define ulint uint32_t
 
 #define ut_ad assert
+#define ut_a assert
 
 #endif

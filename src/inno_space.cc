@@ -16,6 +16,8 @@
 #include "include/ut0crc32.h"
 #include "include/page_crc32.h"
 #include "include/fsp0fsp.h"
+#include "include/fsp0types.h"
+#include "include/page0types.h"
 
 static const uint32_t kPageSize = 16384;
 
@@ -307,6 +309,52 @@ void ShowSpaceHeader() {
   printf("Next Seg ID: %lu\n", mach_read_from_8(header + FSP_SEG_ID));
 
 }
+/** Checks a file segment header within a B-tree root page.
+ *  @return true if valid */
+static bool btr_root_fseg_validate(
+    const fseg_header_t *seg_header, /*!< in: segment header */
+    space_id_t space)                /*!< in: tablespace identifier */
+{
+  ulint offset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET);
+
+  if (mach_read_from_4(seg_header + FSEG_HDR_SPACE) == space && 
+      offset >= FIL_PAGE_DATA && (offset <= UNIV_PAGE_SIZE - FIL_PAGE_DATA_END)) {
+    return true;
+  }
+  return false;
+}
+
+void FindRootPage() {
+  struct stat stat_buf;
+  int ret = fstat(fd, &stat_buf);
+  if (ret == -1) {
+    printf("ShowFile read error %d\n", ret);
+    return;
+  }
+  printf("File size %lu\n", stat_buf.st_size);
+
+  int block_num = stat_buf.st_size / kPageSize;
+
+  page_type_t page_type = 0;
+  uint64_t offset;
+  space_id_t space_id;
+  for (int i = 0; i < block_num; i++) {
+    offset = (uint64_t)kPageSize * (uint64_t)i;
+    ret = pread(fd, read_buf, kPageSize, offset);
+    // fsp header page
+    // get the space id
+    if (i == 0) {
+      space_id = mach_read_from_4(FSP_HEADER_OFFSET + read_buf + FSP_SPACE_ID);
+    }
+    page_type = fil_page_get_type(read_buf);
+    if (page_type == FIL_PAGE_INDEX) {
+      if (btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_LEAF + read_buf, space_id)
+          && btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_TOP + read_buf, space_id)) {
+        printf ("Find root page space_id %u page_no %d\n", space_id, i);
+      }
+    }
+  }
+}
 
 void ShowSpaceIndexs() {
   printf("==========================block==========================\n");
@@ -390,6 +438,7 @@ int main(int argc, char *argv[]) {
     // ShowFile();
     // ShowExtent();
     ShowSpaceHeader();
+    FindRootPage();
     if (strcmp(command, "space-page-type") == 0) {
       ShowSpacePageType();
     } else if (strcmp(command, "space-indexes") == 0) {
