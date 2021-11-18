@@ -28,7 +28,6 @@ usage: inno [-hv] [-f test/t.ibd]
         -d page_num       -- delete page
 Example:
 ====================================================
-```
 
 Show basic file space information
 
