@@ -35,6 +35,9 @@ this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "include/udef.h"
 
+#include <stdio.h>
+#include <stddef.h>
+#include <stdint.h>
 /** The byte offsets on a file page for various variables. */
 
 /** MySQL-4.0.14 space id the page belongs to (== 0) but in later

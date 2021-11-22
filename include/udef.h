@@ -2,6 +2,7 @@
 #define inno_space_udef_h
 
 #include <assert.h>
+#include <stdint.h>
 
 #define byte unsigned char
 #define ulint uint32_t

@@ -324,6 +324,108 @@ static bool btr_root_fseg_validate(
   return false;
 }
 
+
+/** Calculates reserved fragment page slots.
+ @return number of fragment pages */
+static ulint fseg_get_n_frag_pages(
+    fseg_inode_t *inode) /*!< in: segment inode */
+{
+  ulint i;
+  ulint count = 0;
+
+
+  for (i = 0; i < FSEG_FRAG_ARR_N_SLOTS; i++) {
+    if (FIL_NULL != mach_read_from_4(inode + FSEG_FRAG_ARR + i * FSEG_FRAG_SLOT_SIZE)) {
+      count++;
+    }
+  }
+
+  return (count);
+}
+
+/** Calculates the number of pages reserved by a segment, and how many
+pages are currently used.
+@param[in]      space_id    Unique tablespace identifier
+@param[in]      inode       File segment inode pointer
+@param[out]     used        Number of pages used (not more than reserved)
+@return number of reserved pages */
+static ulint fseg_n_reserved_pages_low(space_id_t space_id,
+                                       fseg_inode_t *inode, ulint *used) {
+  ulint ret;
+
+  File_segment_inode fseg_inode(space_id, inode);
+
+  /* number of used segment pages in the FSEG_NOT_FULL list */
+  uint32_t n_used_not_full = fseg_inode.read_not_full_n_used();
+
+  /* total number of segment pages in the FSEG_NOT_FULL list */
+  ulint n_total_not_full =
+      FSP_EXTENT_SIZE * mach_read_from_4(inode + FSEG_NOT_FULL);
+
+  /* n_used can be zero only if n_total is zero. */
+  ut_ad(n_used_not_full > 0 || n_total_not_full == 0);
+  ut_ad((n_used_not_full < n_total_not_full) ||
+        ((n_used_not_full == 0) && (n_total_not_full == 0)));
+
+  /* total number of pages in FSEG_FULL list. */
+  ulint n_total_full = FSP_EXTENT_SIZE * mach_read_from_4(inode + FSEG_FULL + FLST_LEN);
+
+  /* total number of pages in FSEG_FREE list. */
+  ulint n_total_free = FSP_EXTENT_SIZE * flst_get_len(inode + FSEG_FREE);
+
+  /* Number of fragment pages in the segment. */
+  ulint n_frags = fseg_get_n_frag_pages(inode);
+
+  *used = n_frags + n_total_full + n_used_not_full;
+  ret = n_frags + n_total_full + n_total_free + n_total_not_full;
+
+  ut_ad(*used <= ret);
+  ut_ad((*used < ret) || ((n_used_not_full == 0) && (n_total_not_full == 0) &&
+                          (n_total_free == 0)));
+
+  return (ret);
+}
+
+/** Writes info of a segment. */
+static void fseg_print_low(space_id_t space_id,
+                           fseg_inode_t *inode /*!< in: segment inode */
+                           )
+{
+  space_id_t space;
+  ulint n_used;
+  ulint n_frag;
+  ulint n_free;
+  ulint n_not_full;
+  ulint n_full;
+  ulint reserved;
+  ulint used;
+  page_no_t page_no;
+  ib_id_t seg_id;
+  File_segment_inode fseg_inode(space_id, inode);
+
+  space = page_get_space_id(page_align(inode));
+  page_no = page_get_page_no(page_align(inode));
+
+  reserved = fseg_n_reserved_pages_low(space_id, inode, &used);
+
+  seg_id = mach_read_from_8(inode + FSEG_ID);
+
+  n_used = fseg_inode.read_not_full_n_used();
+  n_frag = fseg_get_n_frag_pages(inode);
+  n_free = flst_get_len(inode + FSEG_FREE);
+  n_not_full = flst_get_len(inode + FSEG_NOT_FULL);
+  n_full = flst_get_len(inode + FSEG_FULL);
+  std::cout << "SEGMENT id " << seg_id << " space " << space
+                          << ";"
+                          << " page " << page_no << ";"
+                          << " res " << reserved << " used " << used << ";"
+                          << " full ext " << n_full << ";"
+                          << " fragm pages " << n_frag << ";"
+                          << " free extents " << n_free << ";"
+                          << " not full extents " << n_not_full << ": pages "
+                          << n_used;
+
+}
 void FindRootPage() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);

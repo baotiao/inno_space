@@ -233,5 +233,37 @@ enum xdes_state_t {
 /** The number of reserved pages in a fragment extent. */
 const ulint XDES_FRAG_N_USED = 2;
 
+/** A wrapper class to operate on a file segment inode pointer (fseg_inode_t*)
+ */
+class File_segment_inode {
+ public:
+  /** Constructor
+   @param[in]   space_id  Table space identifier
+   @param[in]   inode     File segment inode pointer */
+  File_segment_inode(space_id_t space_id,
+                     fseg_inode_t *inode)
+      : m_space_id(space_id),
+        m_fseg_inode(inode)
+  {
+  }
+
+  /** Get the current value of FSEG_NOT_FULL_N_USED.
+   @return the current value of FSEG_NOT_FULL_N_USED. */
+  uint32_t read_not_full_n_used() const;
+
+  /** Get the segment identifier value.
+   @return the segment identifier value. */
+  uint64_t get_seg_id() const {
+    return (mach_read_from_8(m_fseg_inode + FSEG_ID));
+  }
+
+ private:
+  /** Unique tablespace identifier */
+  space_id_t m_space_id;
+
+  /** file segment inode pointer that is being wrapped by this object. */
+  fseg_inode_t *m_fseg_inode;
+};
+
 /* @} */
 #endif

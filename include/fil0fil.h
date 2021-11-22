@@ -7,6 +7,8 @@
 #include "include/my_inttypes.h"
 #include "include/mach_data.h"
 
+#include <limits>
+
 /** The byte offsets on a file page for various variables. */
 
 /** MySQL-4.0.14 space id the page belongs to (== 0) but in later
@@ -191,4 +193,65 @@ extern page_no_t fil_page_get_next(const byte *page);
  * @param[in]  type    File page type to set */
 extern void fil_page_set_type(byte *page, ulint type);
 
+/** An empty tablespace (CREATE TABLESPACE) has minimum
+ * of 4 pages and an empty CREATE TABLE (file_per_table) has 6 pages.
+ * Minimum of these two is 4 */
+constexpr size_t FIL_IBD_FILE_INITIAL_SIZE_5_7 = 4;
+
+/** 'null' (undefined) page offset in the context of file spaces */
+constexpr page_no_t FIL_NULL = std::numeric_limits<page_no_t>::max();
+
+/** Maximum Page Number, one less than FIL_NULL */
+constexpr page_no_t PAGE_NO_MAX = std::numeric_limits<page_no_t>::max() - 1;
+
+/** Unknown space id */
+constexpr space_id_t SPACE_UNKNOWN = std::numeric_limits<space_id_t>::max();
+
+using fil_faddr_t = byte;
+
+/** File space address */
+struct fil_addr_t {
+  /* Default constructor */
+  fil_addr_t() : page(FIL_NULL), boffset(0) {}
+
+  /** Constructor
+  @param[in]	p	Logical page number
+  @param[in]	boff	Offset within the page */
+  fil_addr_t(page_no_t p, uint32_t boff) : page(p), boffset(boff) {}
+
+  /** Compare to instances
+  @param[in]	rhs	Instance to compare with
+  @return true if the page number and page offset are equal */
+  bool is_equal(const fil_addr_t &rhs) const {
+    return (page == rhs.page && boffset == rhs.boffset);
+  }
+
+  /** Check if the file address is null.
+  @return true if null */
+  bool is_null() const { return (page == FIL_NULL && boffset == 0); }
+
+  /** Print a string representation.
+  @param[in,out]	out		Stream to write to */
+  std::ostream &print(std::ostream &out) const {
+    out << "[fil_addr_t: page=" << page << ", boffset=" << boffset << "]";
+
+    return (out);
+  }
+
+  /** Page number within a space */
+  page_no_t page;
+
+  /** Byte offset within the page */
+  uint32_t boffset;
+};
+
+/* For printing fil_addr_t to a stream.
+@param[in,out]	out		Stream to write to
+@param[in]	obj		fil_addr_t instance to write */
+inline std::ostream &operator<<(std::ostream &out, const fil_addr_t &obj) {
+  return (obj.print(out));
+}
+
+/** The null file address */
+extern fil_addr_t fil_addr_null;
 #endif
