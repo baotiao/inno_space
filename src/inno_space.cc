@@ -25,6 +25,7 @@ char path[1024];
 int fd;
 
 byte* read_buf;
+byte* inode_page_buf;
 
 static void usage()
 {
@@ -388,8 +389,7 @@ static ulint fseg_n_reserved_pages_low(space_id_t space_id,
 
 /** Writes info of a segment. */
 static void fseg_print_low(space_id_t space_id,
-                           fseg_inode_t *inode /*!< in: segment inode */
-                           )
+                           fseg_inode_t *inode) /*!< in: segment inode */
 {
   space_id_t space;
   ulint n_used;
@@ -400,11 +400,11 @@ static void fseg_print_low(space_id_t space_id,
   ulint reserved;
   ulint used;
   page_no_t page_no;
-  ib_id_t seg_id;
+  uint64_t seg_id;
   File_segment_inode fseg_inode(space_id, inode);
 
-  space = page_get_space_id(page_align(inode));
-  page_no = page_get_page_no(page_align(inode));
+  space = page_get_space_id(align_page(inode));
+  page_no = page_get_page_no(align_page(inode));
 
   reserved = fseg_n_reserved_pages_low(space_id, inode, &used);
 
@@ -424,6 +424,7 @@ static void fseg_print_low(space_id_t space_id,
                           << " free extents " << n_free << ";"
                           << " not full extents " << n_not_full << ": pages "
                           << n_used;
+  std::cout << std::endl;
 
 }
 void FindRootPage() {
@@ -453,6 +454,18 @@ void FindRootPage() {
       if (btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_LEAF + read_buf, space_id)
           && btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_TOP + read_buf, space_id)) {
         printf ("Find root page space_id %u page_no %d\n", space_id, i);
+        fseg_header_t *seg_header;
+        seg_header = read_buf + PAGE_HEADER + PAGE_BTR_SEG_LEAF;
+        fil_addr_t inode_addr;
+        inode_addr.page = mach_read_from_4(seg_header + FSEG_HDR_PAGE_NO);
+        inode_addr.boffset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET);
+
+        posix_memalign((void**)&inode_page_buf, kPageSize, kPageSize);
+        ret = pread(fd, inode_page_buf, kPageSize, offset);
+        fseg_inode_t *inode = inode_page_buf + inode_addr.boffset;
+
+        free(inode_page_buf);
+        fseg_print_low(space_id, inode);
       }
     }
   }
@@ -559,6 +572,8 @@ int main(int argc, char *argv[]) {
   if (update_checksum) {
     UpdateCheckSum(user_page);
   }
+
+  free(read_buf);
 
   return 0;
 }

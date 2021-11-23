@@ -7,7 +7,9 @@
 #include "include/my_inttypes.h"
 #include "include/mach_data.h"
 
+
 #include <limits>
+#include <iostream>
 
 /** The byte offsets on a file page for various variables. */
 

@@ -3,6 +3,8 @@
 #define inno_space_page_page_h
 
 #include "include/fil0fil.h"
+#include "include/page0types.h"
+#include "include/fil0types.h"
 
 /*			PAGE HEADER
         ===========
@@ -55,5 +57,15 @@ Index page header starts at the first offset left free by the FIL-module */
 
 
 #define UNIV_PAGE_SIZE (16 * 1024)
+
+/** Gets the page number.
+ @return page number */
+page_no_t page_get_page_no(const page_t *page); /*!< in: page */
+
+/** Gets the tablespace identifier.
+ @return space id */
+space_id_t page_get_space_id(const page_t *page); /*!< in: page */
+
+page_t *align_page(const void* ptr);
 
 #endif
