@@ -427,6 +427,7 @@ static void fseg_print_low(space_id_t space_id,
   std::cout << std::endl;
 
 }
+
 void FindRootPage() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
@@ -453,7 +454,9 @@ void FindRootPage() {
     if (page_type == FIL_PAGE_INDEX) {
       if (btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_LEAF + read_buf, space_id)
           && btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_TOP + read_buf, space_id)) {
-        printf ("Find root page space_id %u page_no %d\n", space_id, i);
+        printf("Root page space_id %u page_no %d\n", space_id, i);
+
+        printf("Leaf page segment\n");
         fseg_header_t *seg_header;
         seg_header = read_buf + PAGE_HEADER + PAGE_BTR_SEG_LEAF;
         fil_addr_t inode_addr;
@@ -461,11 +464,21 @@ void FindRootPage() {
         inode_addr.boffset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET);
 
         posix_memalign((void**)&inode_page_buf, kPageSize, kPageSize);
+        offset = (uint64_t)kPageSize * (uint64_t)inode_addr.page;
         ret = pread(fd, inode_page_buf, kPageSize, offset);
         fseg_inode_t *inode = inode_page_buf + inode_addr.boffset;
+        fseg_print_low(space_id, inode);
+
+        inode_addr.page = mach_read_from_4(seg_header + FSEG_HDR_PAGE_NO + FSEG_HEADER_SIZE);
+        inode_addr.boffset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET + FSEG_HEADER_SIZE);
+
+        printf("non-Leaf page segment\n");
+        offset = (uint64_t)kPageSize * (uint64_t)inode_addr.page;
+        ret = pread(fd, inode_page_buf, kPageSize, offset);
+        inode = inode_page_buf + inode_addr.boffset;
+        fseg_print_low(space_id, inode);
 
         free(inode_page_buf);
-        fseg_print_low(space_id, inode);
       }
     }
   }
