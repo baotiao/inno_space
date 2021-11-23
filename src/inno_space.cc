@@ -31,15 +31,21 @@ static void usage()
 {
   fprintf(stderr,
       "Inno space\n"
-      "usage: inno [-hv] [-f test/t.ibd]\n"
+      "usage: inno [-h] [-f test/t.ibd] [-p page_num]\n"
       "\t-h                -- show this help\n"
       "\t-f test/t.ibd     -- ibd file \n"
+      "\t\t-c space-page-type     -- show all page type \n"
+      "\t\t-c space-indexes       -- show indexes information\n"
       "\t-p page_num       -- show page information \n"
       "\t-u page_num       -- update page checksum \n"
       "\t-d page_num       -- delete page \n"
       "Example: \n"
       "====================================================\n"
-      "./inno -f ~/git/primary/dbs2250/test/t1.ibd -p 2\n"
+      "Show sbtest1.ibd all page type\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type\n"
+      "Show sbtest1.ibd all indexes information\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-indexes\n"
+      "Delete specify page\n"
       "./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2\n"
       );
 }
@@ -551,7 +557,6 @@ int main(int argc, char *argv[]) {
 
   printf("File path %s path, page num %u\n", path, user_page);
 
-  printf("page num %u\n", user_page);
   fd = open(path, O_RDWR, 0644); 
   if (fd == -1) {
     fprintf(stderr, "[ERROR] Open %s failed: %s\n", path, strerror(errno));
