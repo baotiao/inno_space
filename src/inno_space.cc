@@ -417,8 +417,8 @@ static void fseg_print_low(space_id_t space_id,
   n_full = flst_get_len(inode + FSEG_FULL);
   std::cout << "SEGMENT id " << seg_id << " space " << space
                           << ";"
-                          << " page " << page_no << ";"
-                          << " res " << reserved << " used " << used << ";"
+                          << " inode page no " << page_no << ";"
+                          << " reserved page " << reserved << " used " << used << ";"
                           << " full ext " << n_full << ";"
                           << " fragm pages " << n_frag << ";"
                           << " free extents " << n_free << ";"
