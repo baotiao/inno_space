@@ -65,8 +65,8 @@ void ShowFILHeader(uint32_t page_num) {
 
   printf("CheckSum: %u\n", mach_read_from_4(read_buf));
 
-  uint32_t cc = buf_calc_page_crc32(read_buf, 0);
-  printf("crc %u\n", cc);
+  // uint32_t cc = buf_calc_page_crc32(read_buf, 0);
+  // printf("crc %u\n", cc);
 
   printf("Page number: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
   printf("Previous Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_PREV));
@@ -465,10 +465,12 @@ void FindRootPage() {
         if (is_primary == 0) {
           printf("========Primary index========\n");
           printf("Primary index root page space_id %u page_no %d\n", space_id, i);
+          printf("Btree hight: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
           is_primary = 1;
         } else {
           printf("========Secondary index========\n");
           printf("Secondary index root page space_id %u page_no %d\n", space_id, i);
+          printf("Btree hight: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
         }
 
         printf("<<<Leaf page segment>>>\n");
