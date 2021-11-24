@@ -1,6 +1,6 @@
 ## Introduction
 
-Inno_space is a parser for InnoDB file formats.
+Inno_space is command tool to access InnoDB ibd file directly. It can parse the file give you detail information about the table. It can also fix corrupt page.
 
 It parse the .ibd file to human readable format. The origin idea come from Jeremy Cole's inno_ruby. However, inno_ruby don't support MySQL8.0, and it is written in ruby, which hard to make the environment. 
 
