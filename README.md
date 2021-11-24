@@ -40,7 +40,7 @@ Delete specify page
 Example1:
 Show basic file space information
 
-└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type
+└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 0
 page num 0
 ==========================space page type==========================
@@ -69,7 +69,7 @@ start           end             count           type
 
 
 Example 2:
-./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 0
 ==========================Space Header==========================
 Space ID: 15
@@ -78,22 +78,58 @@ Free limit Page Number: 152256
 FREE_FRAG page number: 24
 Next Seg ID: 7
 File size 2604662784
-Root page space_id 15 page_no 4
-Leaf page segment
-SEGMENT id 4 space 15; inode page no 2; reserved page 137056 used 137003; full ext 2140; fragm pages 32; free extents 0; not full extents 1: pages 11
-non-Leaf page segment
-SEGMENT id 3 space 15; inode page no 2; reserved page 160 used 116; full ext 1; fragm pages 32; free extents 0; not full extents 1: pages 20
-Root page space_id 15 page_no 31940
-Leaf page segment
-SEGMENT id 6 space 15; inode page no 2; reserved page 14465 used 12160; full ext 7; fragm pages 1; free extents 0; not full extents 219: pages 11711
-non-Leaf page segment
-SEGMENT id 5 space 15; inode page no 2; reserved page 19 used 19; full ext 0; fragm pages 19; free extents 0; not full extents 0: pages 0
+========Primary index========
+Primary index root page space_id 15 page_no 4
+<<<Leaf page segment>>>
+SEGMENT id 4, space id 15
+Extents information:
+FULL extent list size 2140
+FREE extent list size 0
+PARTIALLY FREE extent list size 1
+Pages information:
+Reserved page num: 137056
+Used page num: 137003
+Free page num: 53
 
+<<<Non-Leaf page segment>>>
+SEGMENT id 3, space id 15
+Extents information:
+FULL extent list size 1
+FREE extent list size 0
+PARTIALLY FREE extent list size 1
+Pages information:
+Reserved page num: 160
+Used page num: 116
+Free page num: 44
+
+========Secondary index========
+Secondary index root page space_id 15 page_no 31940
+<<<Leaf page segment>>>
+SEGMENT id 6, space id 15
+Extents information:
+FULL extent list size 7
+FREE extent list size 0
+PARTIALLY FREE extent list size 219
+Pages information:
+Reserved page num: 14465
+Used page num: 12160
+Free page num: 2305
+
+<<<Non-Leaf page segment>>>
+SEGMENT id 5, space id 15
+Extents information:
+FULL extent list size 0
+FREE extent list size 0
+PARTIALLY FREE extent list size 0
+Pages information:
+Reserved page num: 19
+Used page num: 19
+Free page num: 0
 
 Example 3:
 Show specify page information
 
-└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type -p 10
+└─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 10
 ==========================block==========================
 FIL Header:

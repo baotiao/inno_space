@@ -42,9 +42,9 @@ static void usage()
       "Example: \n"
       "====================================================\n"
       "Show sbtest1.ibd all page type\n"
-      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type\n"
       "Show sbtest1.ibd all indexes information\n"
-      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-indexes\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary\n"
       "Delete specify page\n"
       "./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2\n"
       );
@@ -53,7 +53,6 @@ static void usage()
 
 
 void ShowFILHeader(uint32_t page_num) {
-
   printf("==========================block==========================\n");
   printf("FIL Header:\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
@@ -421,17 +420,19 @@ static void fseg_print_low(space_id_t space_id,
   n_free = flst_get_len(inode + FSEG_FREE);
   n_not_full = flst_get_len(inode + FSEG_NOT_FULL);
   n_full = flst_get_len(inode + FSEG_FULL);
-  std::cout << "SEGMENT id " << seg_id << " space " << space
-                          << ";"
-                          << " inode page no " << page_no << ";"
-                          << " reserved page " << reserved << " used " << used << ";"
-                          << " full ext " << n_full << ";"
-                          << " fragm pages " << n_frag << ";"
-                          << " free extents " << n_free << ";"
-                          << " not full extents " << n_not_full << ": pages "
-                          << n_used;
-  std::cout << std::endl;
 
+  printf("SEGMENT id %lu, space id %lu\n", seg_id, space);
+  printf("Extents information:\n");
+  printf("FULL extent list size %u\n", n_full);
+  printf("FREE extent list size %u\n", n_free);
+  printf("PARTIALLY FREE extent list size %u\n", n_not_full);
+
+  printf("Pages information:\n");
+  printf("Reserved page num: %u\n", reserved);
+  printf("Used page num: %u\n", used);
+  printf("Free page num: %u\n", reserved - used);
+
+  return;
 }
 
 void FindRootPage() {
@@ -448,6 +449,7 @@ void FindRootPage() {
   page_type_t page_type = 0;
   uint64_t offset;
   space_id_t space_id;
+  bool is_primary = 0;
   for (int i = 0; i < block_num; i++) {
     offset = (uint64_t)kPageSize * (uint64_t)i;
     ret = pread(fd, read_buf, kPageSize, offset);
@@ -460,9 +462,16 @@ void FindRootPage() {
     if (page_type == FIL_PAGE_INDEX) {
       if (btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_LEAF + read_buf, space_id)
           && btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_TOP + read_buf, space_id)) {
-        printf("Root page space_id %u page_no %d\n", space_id, i);
+        if (is_primary == 0) {
+          printf("========Primary index========\n");
+          printf("Primary index root page space_id %u page_no %d\n", space_id, i);
+          is_primary = 1;
+        } else {
+          printf("========Secondary index========\n");
+          printf("Secondary index root page space_id %u page_no %d\n", space_id, i);
+        }
 
-        printf("Leaf page segment\n");
+        printf("<<<Leaf page segment>>>\n");
         fseg_header_t *seg_header;
         seg_header = read_buf + PAGE_HEADER + PAGE_BTR_SEG_LEAF;
         fil_addr_t inode_addr;
@@ -478,13 +487,14 @@ void FindRootPage() {
         inode_addr.page = mach_read_from_4(seg_header + FSEG_HDR_PAGE_NO + FSEG_HEADER_SIZE);
         inode_addr.boffset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET + FSEG_HEADER_SIZE);
 
-        printf("non-Leaf page segment\n");
+        printf("\n<<<Non-Leaf page segment>>>\n");
         offset = (uint64_t)kPageSize * (uint64_t)inode_addr.page;
         ret = pread(fd, inode_page_buf, kPageSize, offset);
         inode = inode_page_buf + inode_addr.boffset;
         fseg_print_low(space_id, inode);
 
         free(inode_page_buf);
+        printf("\n");
       }
     }
   }
@@ -571,15 +581,16 @@ int main(int argc, char *argv[]) {
     // ShowFile();
     // ShowExtent();
     ShowSpaceHeader();
-    FindRootPage();
-    if (strcmp(command, "space-page-type") == 0) {
+    if (strcmp(command, "list-page-type") == 0) {
       ShowSpacePageType();
-    } else if (strcmp(command, "space-indexes") == 0) {
-      ShowSpaceIndexs();
+    } else if (strcmp(command, "index-summary") == 0) {
+      FindRootPage();
+      // ShowSpaceIndexs();
     }
 
   } else {
     ShowFILHeader(user_page);
+    printf("\n");
     ShowIndexHeader(user_page);
   }
 
