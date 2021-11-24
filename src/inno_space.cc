@@ -394,7 +394,7 @@ static ulint fseg_n_reserved_pages_low(space_id_t space_id,
 
 /** Writes info of a segment. */
 static void fseg_print_low(space_id_t space_id,
-                           fseg_inode_t *inode) /*!< in: segment inode */
+                           fseg_inode_t *inode, uint32_t &free_page) /*!< in: segment inode */
 {
   space_id_t space;
   ulint n_used;
@@ -431,6 +431,7 @@ static void fseg_print_low(space_id_t space_id,
   printf("Reserved page num: %u\n", reserved);
   printf("Used page num: %u\n", used);
   printf("Free page num: %u\n", reserved - used);
+  free_page = reserved - used;
 
   return;
 }
@@ -442,12 +443,14 @@ void FindRootPage() {
     printf("ShowFile read error %d\n", ret);
     return;
   }
-  printf("File size %lu\n", stat_buf.st_size);
 
   int block_num = stat_buf.st_size / kPageSize;
 
+  uint32_t total_free_page = 0;
+  uint32_t free_page = 0;
   page_type_t page_type = 0;
   uint64_t offset;
+  
   space_id_t space_id;
   bool is_primary = 0;
   for (int i = 0; i < block_num; i++) {
@@ -484,7 +487,8 @@ void FindRootPage() {
         offset = (uint64_t)kPageSize * (uint64_t)inode_addr.page;
         ret = pread(fd, inode_page_buf, kPageSize, offset);
         fseg_inode_t *inode = inode_page_buf + inode_addr.boffset;
-        fseg_print_low(space_id, inode);
+        fseg_print_low(space_id, inode, free_page);
+        total_free_page += free_page;
 
         inode_addr.page = mach_read_from_4(seg_header + FSEG_HDR_PAGE_NO + FSEG_HEADER_SIZE);
         inode_addr.boffset = mach_read_from_2(seg_header + FSEG_HDR_OFFSET + FSEG_HEADER_SIZE);
@@ -493,13 +497,22 @@ void FindRootPage() {
         offset = (uint64_t)kPageSize * (uint64_t)inode_addr.page;
         ret = pread(fd, inode_page_buf, kPageSize, offset);
         inode = inode_page_buf + inode_addr.boffset;
-        fseg_print_low(space_id, inode);
+        fseg_print_low(space_id, inode, free_page);
+        total_free_page += free_page;
 
         free(inode_page_buf);
         printf("\n");
       }
     }
   }
+
+  printf("**Suggestion**\n");
+  printf("File size %lu, reserved but not used space %lu, percentage %.2lf\%\n", 
+      stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
+      (double)total_free_page * (double)kPageSize * 100.00 / stat_buf.st_size);
+  printf("Optimize table will get new fie size %lu", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
+
+  return;
 }
 
 void ShowSpaceIndexs() {
