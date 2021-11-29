@@ -80,6 +80,7 @@ Next Seg ID: 7
 File size 2604662784
 ========Primary index========
 Primary index root page space_id 15 page_no 4
+Btree hight: 2
 <<<Leaf page segment>>>
 SEGMENT id 4, space id 15
 Extents information:
@@ -104,6 +105,7 @@ Free page num: 44
 
 ========Secondary index========
 Secondary index root page space_id 15 page_no 31940
+Btree hight: 2
 <<<Leaf page segment>>>
 SEGMENT id 6, space id 15
 Extents information:
@@ -125,6 +127,10 @@ Pages information:
 Reserved page num: 19
 Used page num: 19
 Free page num: 0
+
+**Suggestion**
+File size 2604662784, reserved but not used space 39354368, percentage 1.51%
+Optimize table will get new fie size 2565308416
 
 Example 3:
 Show specify page information
