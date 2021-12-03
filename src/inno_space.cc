@@ -76,8 +76,11 @@ void ShowFILHeader(uint32_t page_num) {
   printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
+void ShowRecord(const rec_t *rec) {
+
+}
 void ShowIndexHeader(uint32_t page_num) {
-  printf("Index Header:\n");
+  printf("Index Header\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
   int ret = pread(fd, read_buf, kPageSize, offset);
@@ -92,6 +95,16 @@ void ShowIndexHeader(uint32_t page_num) {
   printf("Max Trx id: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_MAX_TRX_ID));
   printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
+
+  int rec_num = 0;
+  
+  
+  byte infi_ptr = read_buf + PAGE_NEW_INFIMUM;
+  while (infi_ptr != read_buf + PAGE_NEW_SUPREMUM) {
+    ShowRecord(info_ptr);
+    uint32_t off = mach_read_from_2(infi_ptr - REC_NEXT); 
+    infi_ptr = off;
+  }
 
 }
 
@@ -575,7 +588,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (path_opt == false) {
-    fprintf (stderr, "Please specify the ibd file path\n" );
+    fprintf(stderr, "Please specify the ibd file path\n");
     usage();
     exit(-1);
   }
