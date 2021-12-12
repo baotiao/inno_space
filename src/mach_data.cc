@@ -10,7 +10,7 @@ uint8_t mach_read_from_1(const byte *b) {
 }
 
 uint16_t mach_read_from_2(const byte *b) {
-  return (((uint32_t)(b[0]) << 8) | (uint32_t)(b[1]));
+  return (((ulint)(b[0]) << 8) | (ulint)(b[1]));
 }
 
 uint32_t mach_read_from_4(const byte *b) {

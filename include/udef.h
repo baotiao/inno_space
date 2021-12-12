@@ -6,6 +6,7 @@
 
 #define byte unsigned char
 #define ulint uint32_t
+// #define ulint unsigned long
 
 #define ut_ad assert
 #define ut_a assert

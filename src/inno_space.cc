@@ -18,6 +18,8 @@
 #include "include/fsp0fsp.h"
 #include "include/fsp0types.h"
 #include "include/page0types.h"
+#include "include/rem0types.h"
+#include "include/rec.h"
 
 static const uint32_t kPageSize = 16384;
 
@@ -77,7 +79,9 @@ void ShowFILHeader(uint32_t page_num) {
 }
 
 void ShowRecord(const rec_t *rec) {
-
+  ulint od = rec_get_bit_field_2(rec_ptr, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
+  printf("order %u\n", od);
+  printf("rec_ptr %u off %hu res %u\n", rec_ptr, off, rec_ptr + off);
 }
 void ShowIndexHeader(uint32_t page_num) {
   printf("Index Header\n");
@@ -98,12 +102,20 @@ void ShowIndexHeader(uint32_t page_num) {
 
   int rec_num = 0;
   
-  
-  byte infi_ptr = read_buf + PAGE_NEW_INFIMUM;
-  while (infi_ptr != read_buf + PAGE_NEW_SUPREMUM) {
-    ShowRecord(info_ptr);
-    uint32_t off = mach_read_from_2(infi_ptr - REC_NEXT); 
-    infi_ptr = off;
+  byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
+  printf("read_buf %u\n", read_buf);
+  printf("supremum %d\n", PAGE_NEW_INFIMUM);
+  printf("supremum %d\n", PAGE_NEW_SUPREMUM);
+  while (rec_ptr != read_buf + PAGE_NEW_SUPREMUM) {
+    printf("%u\n", rec_ptr - read_buf);
+    ShowRecord(rec_ptr);
+    ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
+    // handle supremum
+    // https://raw.githubusercontent.com/baotiao/bb/main/uPic/image-20211212031146188.png
+    if (off >= 32768) {
+      break;
+    }
+    rec_ptr += off;
   }
 
 }
