@@ -84,7 +84,7 @@ void ShowRecord(const rec_t *rec) {
   printf("info bits %u\n", rec_get_info_bits(rec, true));
 
   ulint offsets_[REC_OFFS_NORMAL_SIZE];
-  rec_offs_init(offsets_);
+  // rec_offs_init(offsets_);
 
     
 }
