@@ -105,7 +105,10 @@ void ShowIndexHeader(uint32_t page_num) {
   printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
-  int rec_num = 0;
+  uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
+  if (page_type != FIL_PAGE_INDEX) {
+    return;
+  }
   
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
   printf("infimum %d\n", PAGE_NEW_INFIMUM);
