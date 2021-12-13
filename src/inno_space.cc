@@ -79,9 +79,14 @@ void ShowFILHeader(uint32_t page_num) {
 }
 
 void ShowRecord(const rec_t *rec) {
-  ulint od = rec_get_bit_field_2(rec_ptr, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
+  ulint od = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
   printf("order %u\n", od);
-  printf("rec_ptr %u off %hu res %u\n", rec_ptr, off, rec_ptr + off);
+  printf("info bits %u\n", rec_get_info_bits(rec, true));
+
+  ulint offsets_[REC_OFFS_NORMAL_SIZE];
+  rec_offs_init(offsets_);
+
+    
 }
 void ShowIndexHeader(uint32_t page_num) {
   printf("Index Header\n");
@@ -103,11 +108,9 @@ void ShowIndexHeader(uint32_t page_num) {
   int rec_num = 0;
   
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-  printf("read_buf %u\n", read_buf);
-  printf("supremum %d\n", PAGE_NEW_INFIMUM);
+  printf("infimum %d\n", PAGE_NEW_INFIMUM);
   printf("supremum %d\n", PAGE_NEW_SUPREMUM);
   while (rec_ptr != read_buf + PAGE_NEW_SUPREMUM) {
-    printf("%u\n", rec_ptr - read_buf);
     ShowRecord(rec_ptr);
     ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
     // handle supremum
