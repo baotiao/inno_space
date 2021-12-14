@@ -156,8 +156,24 @@ Page level: 0
 Index ID: 142
 
 Example 4:
+
+
+Try to write some corrupt data to data file
+printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' | dd of=../primary/dbs2250/sbtest/sbtest1.ibd bs=1 seek=172032 count=100 conv=notrunc
+The database will crash after visit the data
+The log is:
+
+2021-12-14T09:21:19.230754Z 9 [ERROR] [MY-030043] [InnoDB] InnoDB: Corrupt page resides in file: ./sbtest/sbtest1.ibd, offset: 163840, len: 16384
+2021-12-14T09:21:19.230768Z 9 [ERROR] [MY-011906] [InnoDB] Database page corruption on disk or a failed file read of page [page id: space=15, page number=10]. You may have to recover from a backup.
+2021-12-14T09:21:19.230775Z 9 [Note] [MY-011876] [InnoDB] Page dump in ascii and hex (16384 bytes):
+
 Delete specify page
-./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -d 10
+
+Update specify page checksum
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -u 10
+
+Start mysqld, the database can be started success
 
 ```
 
