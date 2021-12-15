@@ -89,7 +89,7 @@ void ShowRecord(const rec_t *rec) {
 
     
 }
-void ShowIndexHeader(uint32_t page_num) {
+void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Index Header\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
@@ -107,7 +107,7 @@ void ShowIndexHeader(uint32_t page_num) {
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
   uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
-  if (page_type != FIL_PAGE_INDEX) {
+  if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
     return;
   }
   
@@ -140,7 +140,7 @@ void ShowFile() {
 
   for (int i = 0; i < block_num; i++) {
     ShowFILHeader(i);
-    ShowIndexHeader(i);
+    ShowIndexHeader(i, 0);
   }
 }
 
@@ -573,6 +573,7 @@ int main(int argc, char *argv[]) {
   bool show_file = true;
   bool delete_page = false;
   bool update_checksum = false;
+  bool is_show_records = false;
   char command[128];
   while (-1 != (c = getopt(argc, argv, "hf:p:d:u:c:"))) {
     switch (c) {
@@ -638,7 +639,10 @@ int main(int argc, char *argv[]) {
   } else {
     ShowFILHeader(user_page);
     printf("\n");
-    ShowIndexHeader(user_page);
+    if (strcmp(command, "show-records") == 0) {
+      is_show_records = true;
+    }
+    ShowIndexHeader(user_page, is_show_records);
   }
 
   if (delete_page) {
