@@ -79,9 +79,9 @@ void ShowFILHeader(uint32_t page_num) {
 }
 
 void ShowRecord(const rec_t *rec) {
-  ulint od = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
-  printf("order %u\n", od);
-  printf("info bits %u\n", rec_get_info_bits(rec, true));
+  ulint heap_no = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
+  printf("heap no %u\n", heap_no);
+  printf("rec status %u\n", rec_get_status(rec));
 
   ulint offsets_[REC_OFFS_NORMAL_SIZE];
   memset(offsets_, 0, sizeof(offsets_));
@@ -114,15 +114,20 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
   printf("infimum %d\n", PAGE_NEW_INFIMUM);
   printf("supremum %d\n", PAGE_NEW_SUPREMUM);
-  while (rec_ptr != read_buf + PAGE_NEW_SUPREMUM) {
+  while (1) {
     ShowRecord(rec_ptr);
     ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
     // handle supremum
     // https://raw.githubusercontent.com/baotiao/bb/main/uPic/image-20211212031146188.png
-    if (off >= 32768) {
+    // off == 0 mean this is SUPREMUM record
+    if (off == 0) {
       break;
     }
-    rec_ptr += off;
+    // off can't be negative, if the next record is less than current record
+    // the rec_ptr + off will > 16kb
+    // and the result & (UNIV_PAGE_SIZE - 1) will be less then current position
+    off = (((ulong)((rec_ptr + off))) & (UNIV_PAGE_SIZE - 1));
+    rec_ptr = read_buf + off;
   }
 
 }
