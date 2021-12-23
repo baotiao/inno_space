@@ -36,10 +36,11 @@ static void usage()
       "usage: inno [-h] [-f test/t.ibd] [-p page_num]\n"
       "\t-h                -- show this help\n"
       "\t-f test/t.ibd     -- ibd file \n"
-      "\t\t-c space-page-type     -- show all page type \n"
+      "\t\t-c space-page-type     -- show all page type\n"
       "\t\t-c space-indexes       -- show indexes information\n"
-      "\t-p page_num       -- show page information \n"
-      "\t-u page_num       -- update page checksum \n"
+      "\t-p page_num       -- show page information\n"
+      "\t\t-c show-records        -- show all records information\n"
+      "\t-u page_num       -- update page checksum\n"
       "\t-d page_num       -- delete page \n"
       "Example: \n"
       "====================================================\n"
@@ -47,8 +48,12 @@ static void usage()
       "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type\n"
       "Show sbtest1.ibd all indexes information\n"
       "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary\n"
+      "Show specify page information\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10\n"
       "Delete specify page\n"
       "./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2\n"
+      "Update specify page checksum\n"
+      "./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2\n"
       );
 }
 
