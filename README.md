@@ -23,19 +23,24 @@ Inno space
 usage: inno [-h] [-f test/t.ibd] [-p page_num]
         -h                -- show this help
         -f test/t.ibd     -- ibd file
-                -c space-page-type     -- show all page type
-                -c space-indexes       -- show indexes information
+                -c list-page-type      -- show all page type
+                -c index-summary       -- show indexes information
         -p page_num       -- show page information
+                -c show-records        -- show all records information
         -u page_num       -- update page checksum
         -d page_num       -- delete page
 Example:
 ====================================================
 Show sbtest1.ibd all page type
-./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-page-type
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type
 Show sbtest1.ibd all indexes information
-./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c space-indexes
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary
+Show specify page information
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
 Delete specify page
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
+Update specify page checksum
+./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2
 
 Example1:
 Show basic file space information
