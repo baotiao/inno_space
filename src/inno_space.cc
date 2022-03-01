@@ -188,7 +188,7 @@ static uint32_t find_prev_page(uint32_t page_num) {
     ret = pread(fd, read_buf, kPageSize, offset);
     next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
     if (next_page == page_num) {
-      return next_page;
+      return i;
     }
   }
   return 0;
@@ -210,7 +210,7 @@ static uint32_t find_next_page(uint32_t page_num) {
     ret = pread(fd, read_buf, kPageSize, offset);
     prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
     if (prev_page == page_num) {
-      return prev_page;
+      return i;
     }
   }
   return 0;
