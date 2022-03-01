@@ -172,6 +172,50 @@ void UpdateCheckSum(uint32_t page_num) {
   printf("UpdateCheckSum %u\n", ret);
 }
 
+static uint32_t find_prev_page(uint32_t page_num) {
+  struct stat stat_buf;
+  int ret = fstat(fd, &stat_buf);
+  if (ret == -1) {
+    printf("ShowFile read error %d\n", ret);
+    return 0;
+  }
+  int block_num = stat_buf.st_size / kPageSize;
+
+  uint64_t offset = 0;
+  uint32_t next_page;
+  for (int i = 0; i < block_num; i++) {
+    offset = (uint64_t)kPageSize * (uint64_t)i;
+    ret = pread(fd, read_buf, kPageSize, offset);
+    next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
+    if (next_page == page_num) {
+      return next_page;
+    }
+  }
+  return 0;
+}
+
+static uint32_t find_next_page(uint32_t page_num) {
+  struct stat stat_buf;
+  int ret = fstat(fd, &stat_buf);
+  if (ret == -1) {
+    printf("ShowFile read error %d\n", ret);
+    return 0;
+  }
+  int block_num = stat_buf.st_size / kPageSize;
+
+  uint64_t offset = 0;
+  uint32_t prev_page;
+  for (int i = 0; i < block_num; i++) {
+    offset = (uint64_t)kPageSize * (uint64_t)i;
+    ret = pread(fd, read_buf, kPageSize, offset);
+    prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
+    if (prev_page == page_num) {
+      return prev_page;
+    }
+  }
+  return 0;
+}
+
 void DeletePage(uint32_t page_num) {
   printf("==========================DeletePage==========================\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
@@ -188,8 +232,16 @@ void DeletePage(uint32_t page_num) {
   printf("crc %u\n", cc);
   byte prev_buf[16 * 1024];
   byte next_buf[16 * 1024];
-  uint32_t prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
-  uint32_t next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
+  uint32_t prev_page, next_page;
+  // prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
+  // next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
+  prev_page = find_prev_page(page_num);
+  next_page = find_next_page(page_num);
+  if (prev_page || next_page == 0) {
+    printf("Delete Page can't next or prev page, prev_page %u, next_page %u\n", prev_page, next_page);
+    return;
+  }
+
   uint64_t prev_offset = (uint64_t)kPageSize * (uint64_t)prev_page;
   uint64_t next_offset = (uint64_t)kPageSize * (uint64_t)next_page;
   pread(fd, prev_buf, kPageSize, prev_offset);
