@@ -232,12 +232,12 @@ void DeletePage(uint32_t page_num) {
   printf("crc %u\n", cc);
   byte prev_buf[16 * 1024];
   byte next_buf[16 * 1024];
-  uint32_t prev_page, next_page;
+  uint32_t prev_page = 0, next_page = 0;
   // prev_page = mach_read_from_4(read_buf + FIL_PAGE_PREV);
   // next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
   prev_page = find_prev_page(page_num);
   next_page = find_next_page(page_num);
-  if (prev_page || next_page == 0) {
+  if (prev_page == 0 || next_page == 0) {
     printf("Delete Page can't next or prev page, prev_page %u, next_page %u\n", prev_page, next_page);
     return;
   }
