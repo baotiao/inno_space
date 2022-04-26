@@ -59,7 +59,7 @@ static void usage()
 
 
 
-void ShowFILHeader(uint32_t page_num) {
+void ShowFILHeader(uint32_t page_num, uint16_t* type) {
   printf("==========================block==========================\n");
   printf("FIL Header:\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
@@ -79,7 +79,8 @@ void ShowFILHeader(uint32_t page_num) {
   printf("Previous Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_PREV));
   printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
   printf("Page LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_LSN));
-  printf("Page Type: %hu\n", mach_read_from_2(read_buf + FIL_PAGE_TYPE));
+  *type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
+  printf("Page Type: %hu\n", *type);
   printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
@@ -137,6 +138,21 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
 
 }
 
+void ShowBlobHeader(uint32_t page_num) {
+  printf("BLOB Header:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowBlobHeader read error %d\n", ret);
+    return;
+  }
+  printf("BLOB part len on this page: %lu\n", mach_read_from_4(read_buf + PAGE_HEADER));
+  printf("BLOB next part page no: %lu\n", mach_read_from_4(read_buf + PAGE_HEADER + BTR_BLOB_HDR_NEXT_PAGE_NO));
+
+}
+
 void ShowFile() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
@@ -147,10 +163,14 @@ void ShowFile() {
   printf("File size %lu\n", stat_buf.st_size);
 
   int block_num = stat_buf.st_size / kPageSize;
-
+  uint16_t type = 0;
   for (int i = 0; i < block_num; i++) {
-    ShowFILHeader(i);
-    ShowIndexHeader(i, 0);
+    ShowFILHeader(i, &type);
+    if (type == FIL_PAGE_TYPE_BLOB) {
+      ShowBlobHeader(i);
+    } else {
+      ShowIndexHeader(i, 0);
+    }
   }
 }
 
@@ -699,12 +719,17 @@ int main(int argc, char *argv[]) {
     }
 
   } else {
-    ShowFILHeader(user_page);
+    uint16_t type = 0;
+    ShowFILHeader(user_page, &type);
     printf("\n");
     if (strcmp(command, "show-records") == 0) {
       is_show_records = true;
     }
-    ShowIndexHeader(user_page, is_show_records);
+    if (type == FIL_PAGE_TYPE_BLOB) {
+      ShowBlobHeader(user_page);
+    } else {
+      ShowIndexHeader(user_page, is_show_records);
+    }
   }
 
   if (delete_page) {
