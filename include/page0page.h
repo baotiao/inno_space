@@ -56,6 +56,17 @@ Index page header starts at the first offset left free by the FIL-module */
      B-tree, but not in the root of an ibuf tree */
 
 
+/** The structure of a BLOB part header */
+/* @{ */
+/*--------------------------------------*/
+#define BTR_BLOB_HDR_PART_LEN		0	/*!< BLOB part len on this
+						page */
+#define BTR_BLOB_HDR_NEXT_PAGE_NO	4	/*!< next BLOB part page no,
+						FIL_NULL if none */
+/*--------------------------------------*/
+#define BTR_BLOB_HDR_SIZE		8	/*!< Size of a BLOB
+						part header, in bytes */
+
 #define UNIV_PAGE_SIZE (16 * 1024)
 
 /** Gets the page number.
