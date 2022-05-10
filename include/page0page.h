@@ -67,6 +67,80 @@ Index page header starts at the first offset left free by the FIL-module */
 #define BTR_BLOB_HDR_SIZE		8	/*!< Size of a BLOB
 						part header, in bytes */
 
+/* Max number of rollback segments */
+#define TRX_SYS_N_RSEGS 128
+
+/** The offset of the Rollback Segment Directory header on an RSEG_ARRAY page */
+#define RSEG_ARRAY_HEADER FSEG_PAGE_DATA
+
+/** Rollback Segment Array Header */
+/*------------------------------------------------------------- */
+/** The RSEG ARRAY base version is a number derived from the string
+'RSEG' [0x 52 53 45 47] for extra validation. Each new version
+increments the base version by 1. */
+#define RSEG_ARRAY_VERSION 0x52534547 + 1
+
+/** The RSEG ARRAY version offset in the header. */
+#define RSEG_ARRAY_VERSION_OFFSET 0
+
+/** The current number of rollback segments being tracked in this array */
+#define RSEG_ARRAY_SIZE_OFFSET 4
+
+/** This is the pointer to the file segment inode that tracks this
+rseg array page. */
+#define RSEG_ARRAY_FSEG_HEADER_OFFSET 8
+
+/** The start of the array of rollback segment header page numbers for this
+undo tablespace. The potential size of this array is limited only by the
+page size minus overhead. The actual size of the array is limited by
+srv_rollback_segments. */
+#define RSEG_ARRAY_PAGES_OFFSET (8 + FSEG_HEADER_SIZE)
+
+/** Reserved space at the end of an RSEG_ARRAY page reserved for future use. */
+#define RSEG_ARRAY_RESERVED_BYTES 200
+
+/* Slot size of the array of rollback segment header page numbers */
+#define RSEG_ARRAY_SLOT_SIZE 4
+/*------------------------------------------------------------- */
+
+/** The offset of the undo log page header on pages of the undo log */
+#define TRX_UNDO_PAGE_HDR FSEG_PAGE_DATA
+/*-------------------------------------------------------------*/
+/** Transaction undo log page header offsets */
+/* @{ */
+#define TRX_UNDO_PAGE_TYPE  \
+  0 /*!< TRX_UNDO_INSERT or \
+    TRX_UNDO_UPDATE */
+#define TRX_UNDO_PAGE_START               \
+  2 /*!< Byte offset where the undo log   \
+    records for the LATEST transaction    \
+    start on this page (remember that     \
+    in an update undo log, the first page \
+    can contain several undo logs) */
+#define TRX_UNDO_PAGE_FREE                 \
+  4 /*!< On each page of the undo log this \
+    field contains the byte offset of the  \
+    first free byte on the page */
+#define TRX_UNDO_PAGE_NODE               \
+  6 /*!< The file list node in the chain \
+    of undo log pages */
+/*-------------------------------------------------------------*/
+#define TRX_UNDO_PAGE_HDR_SIZE (6 + FLST_NODE_SIZE)
+/*!< Size of the transaction undo
+log page header, in bytes */
+/* @} */
+
+#define TRX_UNDO_SEG_HDR (TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_HDR_SIZE)
+/** Undo log segment header */
+/* @{ */
+/*-------------------------------------------------------------*/
+#define TRX_UNDO_STATE 0 /*!< TRX_UNDO_ACTIVE, ... */
+
+#define TRX_UNDO_LAST_LOG                   \
+  2 /*!< Offset of the last undo log header \
+    on the segment header page, 0 if        \
+    none */
+
 #define UNIV_PAGE_SIZE (16 * 1024)
 
 /** Gets the page number.

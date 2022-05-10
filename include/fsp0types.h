@@ -56,5 +56,10 @@ typedef byte fseg_header_t;
      header, in bytes */
 /* @} */
 
+/** The structure of undo page header */
+#define FSP_RSEG_ARRAY_PAGE_NO      \
+  3 /*!< rollback segment directory \
+    page number in each undo tablespace */
+
 
 #endif
