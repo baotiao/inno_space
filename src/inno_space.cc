@@ -153,6 +153,60 @@ void ShowBlobHeader(uint32_t page_num) {
 
 }
 
+void ShowUndoPageHeader(uint32_t page_num) {
+  printf("Undo Page Header:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowUndoPageHeader read error %d\n", ret);
+    return;
+  }
+
+  /** Print undo page Header. */
+  printf("## Page Type enum:[1:insert; 2:update]\n");
+  printf("Undo page type: %u\n", mach_read_from_2(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_TYPE));
+  printf("Latest undo log rec offset on this undo page: %u\n", mach_read_from_2(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_START));
+  printf("First free byte offset on this undo page: %u\n", mach_read_from_2(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_FREE));
+
+  fil_addr_t prev_undo_page_node = flst_get_prev_addr(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_NODE);
+  fil_addr_t next_undo_page_node = flst_get_next_addr(read_buf + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_NODE);
+  printf("Prev undo page node[%u, %u]\n", prev_undo_page_node.boffset, prev_undo_page_node.page);
+  printf("Next undo page node[%u, %u]\n\n", next_undo_page_node.boffset, next_undo_page_node.page);
+
+  /** Print undo segment header. */
+  printf("## Undo state enum:[1:active; 2:cached; 3:free; 4:to purge; 5:preapred]\n");
+  printf("Undo state on this undo page: %u\n", mach_read_from_2(read_buf + TRX_UNDO_SEG_HDR + TRX_UNDO_STATE));
+  printf("Offset of last undo log header on this undo page: %u\n", mach_read_from_2(read_buf + TRX_UNDO_SEG_HDR + TRX_UNDO_LAST_LOG));
+
+}
+
+void ShowRsegArray(uint32_t page_num) {
+  ut_a(page_num == FSP_RSEG_ARRAY_PAGE_NO);
+
+  printf("Rsegs Array:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowRsegArray read error %d\n", ret);
+    return;
+  }
+
+  ut_a(RSEG_ARRAY_VERSION ==
+        mach_read_from_4(read_buf + RSEG_ARRAY_HEADER + RSEG_ARRAY_VERSION_OFFSET));
+
+  printf("Rsegs dict size: %u\n", mach_read_from_4(read_buf + RSEG_ARRAY_HEADER + RSEG_ARRAY_SIZE_OFFSET));
+
+  byte *rseg_array = read_buf + RSEG_ARRAY_HEADER + RSEG_ARRAY_PAGES_OFFSET;
+  for (ulint slot = 0; slot < TRX_SYS_N_RSEGS; slot++) {
+    page_no_t page_no = mach_read_from_4(rseg_array + slot * RSEG_ARRAY_SLOT_SIZE);
+    printf("Rseg %u's page no: %u\n", slot, page_no);
+  }
+}
+
 void ShowFile() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
@@ -168,6 +222,10 @@ void ShowFile() {
     ShowFILHeader(i, &type);
     if (type == FIL_PAGE_TYPE_BLOB) {
       ShowBlobHeader(i);
+    } else if (type == FIL_PAGE_UNDO_LOG) {
+      ShowUndoPageHeader(i);
+    } else if (type == FIL_PAGE_TYPE_RSEG_ARRAY) {
+      ShowRsegArray(i);
     } else {
       ShowIndexHeader(i, 0);
     }
@@ -727,6 +785,10 @@ int main(int argc, char *argv[]) {
     }
     if (type == FIL_PAGE_TYPE_BLOB) {
       ShowBlobHeader(user_page);
+    } else if (type == FIL_PAGE_UNDO_LOG) {
+      ShowUndoPageHeader(user_page);
+    } else if (type == FIL_PAGE_TYPE_RSEG_ARRAY) {
+      ShowRsegArray(user_page);
     } else {
       ShowIndexHeader(user_page, is_show_records);
     }
