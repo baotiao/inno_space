@@ -5,6 +5,7 @@
 #include "include/fil0fil.h"
 #include "include/page0types.h"
 #include "include/fil0types.h"
+#include "include/fut0lst.h"
 
 /*			PAGE HEADER
         ===========
@@ -66,6 +67,46 @@ Index page header starts at the first offset left free by the FIL-module */
 /*--------------------------------------*/
 #define BTR_BLOB_HDR_SIZE		8	/*!< Size of a BLOB
 						part header, in bytes */
+
+/* blob first page data */
+enum class BlobFirstPage {
+  /** One byte of flag bits.  Currently only one bit (the least
+  significant bit) is used, other 7 bits are available for future use.*/
+  OFFSET_FLAGS = FIL_PAGE_DATA + 1,
+
+  /** LOB version. 4 bytes.*/
+  OFFSET_LOB_VERSION = OFFSET_FLAGS + 1,
+
+  /** The latest transaction that modified this LOB. */
+  OFFSET_LAST_TRX_ID = OFFSET_LOB_VERSION + 4,
+
+  /** The latest transaction undo_no that modified this LOB. */
+  OFFSET_LAST_UNDO_NO = OFFSET_LAST_TRX_ID + 6,
+
+  /** Length of data stored in this page.  4 bytes. */
+  OFFSET_DATA_LEN = OFFSET_LAST_UNDO_NO + 4,
+
+  /** The trx that created the data stored in this page. */
+  OFFSET_TRX_ID = OFFSET_DATA_LEN + 4,
+
+  /** The offset where the list base node is located.  This is the list
+  of LOB pages. */
+  OFFSET_INDEX_LIST = OFFSET_TRX_ID + 6,
+};
+
+/* Blob index page */
+enum class BlobIndexPage {
+  OFFSET_VERSION = FIL_PAGE_DATA,
+  LOB_PAGE_DATA = OFFSET_VERSION + 1
+};
+
+/* Blob data page */
+enum class BlobDataPage {
+  OFFSET_VERSION = FIL_PAGE_DATA,
+  OFFSET_DATA_LEN = OFFSET_VERSION + 1,
+  OFFSET_TRX_ID = OFFSET_DATA_LEN + 4,
+  LOB_PAGE_DATA = OFFSET_TRX_ID + 6
+};
 
 /* Max number of rollback segments */
 #define TRX_SYS_N_RSEGS 128

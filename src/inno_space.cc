@@ -153,6 +153,54 @@ void ShowBlobHeader(uint32_t page_num) {
 
 }
 
+void ShowBlobFirstPage(uint32_t page_num) {
+  printf("BLOB First Page:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowBlobFirstPage read error %d\n", ret);
+    return;
+  }
+  printf("BLOB FLAGS: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_FLAGS));
+  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_LOB_VERSION));
+  printf("BLOB LAST_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_TRX_ID));
+  printf("BLOB LAST_UNDO_NO: %lu\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_UNDO_NO));
+  printf("BLOB DATA_LEN: %lu\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_DATA_LEN));
+  printf("BLOB TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_TRX_ID));
+}
+
+void ShowBlobIndexPage(uint32_t page_num) {
+  printf("BLOB Index Page:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowBlobIndexPage read error %d\n", ret);
+    return;
+  }
+
+  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
+}
+
+void ShowBlobDataPage(uint32_t page_num) {
+  printf("BLOB Data Page:\n");
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+
+  if (ret == -1) {
+    printf("ShowBlobDataPage read error %d\n", ret);
+    return;
+  }
+
+  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
+  printf("BLOB OFFSET_DATA_LEN: %lu\n", mach_read_from_4(read_buf + (ulint)BlobDataPage::OFFSET_DATA_LEN));
+  printf("BLOB OFFSET_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobDataPage::OFFSET_TRX_ID));
+}
+
 void ShowUndoPageHeader(uint32_t page_num) {
   printf("Undo Page Header:\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
@@ -222,6 +270,12 @@ void ShowFile() {
     ShowFILHeader(i, &type);
     if (type == FIL_PAGE_TYPE_BLOB) {
       ShowBlobHeader(i);
+    } else if (type == FIL_PAGE_TYPE_LOB_FIRST) {
+      ShowBlobFirstPage(i);
+    } else if (type == FIL_PAGE_TYPE_LOB_INDEX) {
+      ShowBlobIndexPage(i);
+    } else if (type == FIL_PAGE_TYPE_LOB_DATA) {
+      ShowBlobDataPage(i);
     } else if (type == FIL_PAGE_UNDO_LOG) {
       ShowUndoPageHeader(i);
     } else if (type == FIL_PAGE_TYPE_RSEG_ARRAY) {
@@ -419,6 +473,12 @@ void PrintPageType(page_type_t page_type) {
     str_type = "SUBSEQUENT FRESHLY ALLOCATED PAGE";
   } else if (page_type == FIL_PAGE_TYPE_UNKNOWN) {
     str_type = "UNDO TYPE PAGE";
+  } else if (page_type == FIL_PAGE_TYPE_LOB_FIRST) {
+    str_type = "FIRST PAGE OF UNCOMPRESSED BLOB PAGE";
+  } else if (page_type == FIL_PAGE_TYPE_LOB_INDEX) {
+    str_type = "INDEX PAGE OF UNCOMPRESSED BLOB PAGE";
+  } else if (page_type == FIL_PAGE_TYPE_LOB_DATA) {
+    str_type = "DATA PAGE OF UNCOMPRESSED BLOB PAGE";
   } else {
     str_type = "ERROR";
   }
@@ -785,6 +845,12 @@ int main(int argc, char *argv[]) {
     }
     if (type == FIL_PAGE_TYPE_BLOB) {
       ShowBlobHeader(user_page);
+    } else if (type == FIL_PAGE_TYPE_LOB_FIRST) {
+      ShowBlobFirstPage(user_page);
+    } else if (type == FIL_PAGE_TYPE_LOB_INDEX) {
+      ShowBlobIndexPage(user_page);
+    } else if (type == FIL_PAGE_TYPE_LOB_DATA) {
+      ShowBlobDataPage(user_page);
     } else if (type == FIL_PAGE_UNDO_LOG) {
       ShowUndoPageHeader(user_page);
     } else if (type == FIL_PAGE_TYPE_RSEG_ARRAY) {

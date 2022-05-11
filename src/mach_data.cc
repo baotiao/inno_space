@@ -1,6 +1,16 @@
 
 #include "include/mach_data.h"
 
+/*******************************************************//**
+Creates a 64-bit integer out of two 32-bit integers.
+@return	created integer */
+uint64_t ut_ull_create(
+  ulint	high,	/*!< in: high-order 32 bits */
+  ulint	low)	/*!< in: low-order 32 bits */
+{
+  return(((uint64_t) high) << 32 | low);
+}
+
 /** The following function is used to fetch data from one byte.
 @param[in]	b	pointer to a byte to read
 @return ulint integer, >= 0, < 256 */
@@ -18,6 +28,11 @@ uint32_t mach_read_from_4(const byte *b) {
       (static_cast<uint32_t>(b[1]) << 16) |
       (static_cast<uint32_t>(b[2]) << 8) | static_cast<uint32_t>(b[3]));
 }
+
+uint64_t mach_read_from_6(const byte*	b) {
+  return(ut_ull_create(mach_read_from_2(b), mach_read_from_4(b + 2)));
+}
+
 /** The following function is used to fetch data from 8 consecutive
  * bytes. The most significant byte is at the lowest address.
  * @param[in]  b pointer to 8 bytes from where read
