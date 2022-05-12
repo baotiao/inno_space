@@ -14,6 +14,9 @@ uint8_t mach_read_from_1(const byte *b);
 uint16_t mach_read_from_2(const byte *b);
 
 uint32_t mach_read_from_4(const byte *b);
+
+uint64_t mach_read_from_6(const byte *b);
+
 /** The following function is used to fetch data from 8 consecutive
  * bytes. The most significant byte is at the lowest address.
  * @param[in]  b pointer to 8 bytes from where read
