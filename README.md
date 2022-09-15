@@ -25,6 +25,7 @@ usage: inno [-h] [-f test/t.ibd] [-p page_num]
         -f test/t.ibd     -- ibd file
                 -c list-page-type      -- show all page type
                 -c index-summary       -- show indexes information
+                -c show-undo-file       -- show undo log detail
         -p page_num       -- show page information
                 -c show-records        -- show all records information
         -u page_num       -- update page checksum
@@ -35,6 +36,8 @@ Show sbtest1.ibd all page type
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type
 Show sbtest1.ibd all indexes information
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary
+Show undo_001 all rseg information
+./inno -f ~/git/primary/dbs2250/log/undo_001 -c show-undo-file
 Show specify page information
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
 Delete specify page

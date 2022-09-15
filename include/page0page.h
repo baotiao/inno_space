@@ -107,6 +107,85 @@ enum class BlobDataPage {
   OFFSET_TRX_ID = OFFSET_DATA_LEN + 4,
   LOB_PAGE_DATA = OFFSET_TRX_ID + 6
 };
+/*-------------------------------------------------------------*/
+/* Slot size */
+#define TRX_RSEG_SLOT_SIZE 4
+
+/* The offset of the rollback segment header on its page */
+#define TRX_RSEG FSEG_PAGE_DATA
+
+/* Transaction rollback segment header */
+/*-------------------------------------------------------------*/
+#define TRX_RSEG_MAX_SIZE                \
+  0 /* Maximum allowed size for rollback \
+    segment in pages */
+#define TRX_RSEG_HISTORY_SIZE        \
+  4 /* Number of file pages occupied \
+    by the logs in the history list */
+#define TRX_RSEG_HISTORY                  \
+  8 /* The update undo logs for committed \
+    transactions */
+#define TRX_RSEG_FSEG_HEADER (8 + FLST_BASE_NODE_SIZE)
+/* Header for the file segment where
+this page is placed */
+#define TRX_RSEG_UNDO_SLOTS (8 + FLST_BASE_NODE_SIZE + FSEG_HEADER_SIZE)
+/* Undo log segment slots */
+/*-------------------------------------------------------------*/
+
+/** The undo log header. There can be several undo log headers on the first
+page of an update undo log segment. */
+/* @{ */
+/*-------------------------------------------------------------*/
+#define TRX_UNDO_TRX_ID 0 /*!< Transaction id */
+#define TRX_UNDO_TRX_NO                  \
+  8 /*!< Transaction number of the       \
+    transaction; defined only if the log \
+    is in a history list */
+#define TRX_UNDO_DEL_MARKS                 \
+  16 /*!< Defined only in an update undo   \
+     log: TRUE if the transaction may have \
+     done delete markings of records, and  \
+     thus purge is necessary */
+#define TRX_UNDO_LOG_START                    \
+  18 /*!< Offset of the first undo log record \
+     of this log on the header page; purge    \
+     may remove undo log record from the      \
+     log start, and therefore this is not     \
+     necessarily the same as this log         \
+     header end offset */
+#define TRX_UNDO_XID_EXISTS                \
+  20 /*!< TRUE if undo log header includes \
+     X/Open XA transaction identification  \
+     XID */
+#define TRX_UNDO_DICT_TRANS                  \
+  21 /*!< TRUE if the transaction is a table \
+     create, index create, or drop           \
+     transaction: in recovery                \
+     the transaction cannot be rolled back   \
+     in the usual way: a 'rollback' rather   \
+     means dropping the created or dropped   \
+     table, if it still exists */
+#define TRX_UNDO_TABLE_ID                  \
+  22 /*!< Id of the table if the preceding \
+     field is TRUE. Note: deprecated */
+
+/*!< Use following two fields to store last or penult statement undo no,
+so that we can rollback the last statement before executing again from proxy.
+Every field only occupy 4 btyes so that undo no can not bigger than UINT_MAX32.
+If it does overflow, transaction resuming will disable for this transaction */
+#define TRX_UNDO_LAST_STMT_UNDO_NO_1 TRX_UNDO_TABLE_ID
+#define TRX_UNDO_LAST_STMT_UNDO_NO_2 (TRX_UNDO_LAST_STMT_UNDO_NO_1 + 4)
+
+#define TRX_UNDO_NEXT_LOG                    \
+  30 /*!< Offset of the next undo log header \
+     on this page, 0 if none */
+#define TRX_UNDO_PREV_LOG                 \
+  32 /*!< Offset of the previous undo log \
+     header on this page, 0 if none */
+#define TRX_UNDO_HISTORY_NODE              \
+  34 /*!< If the log is put to the history \
+     list, the file list node is here */
+/*-------------------------------------------------------------*/
 
 /* Max number of rollback segments */
 #define TRX_SYS_N_RSEGS 128
