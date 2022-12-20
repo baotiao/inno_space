@@ -1,6 +1,6 @@
 
 CXX = g++
-CXXFLAGS = -Wall -W -DNDEBUG -g -O2 -std=c++11
+CXXFLAGS = -Wall -W -DNDEBUG -g -O2 -std=c++11 -Wunused-but-set-variable
 OBJECT = inno
 SRC_DIR = src
 
