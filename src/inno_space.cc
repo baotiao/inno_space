@@ -21,6 +21,8 @@
 #include "include/rem0types.h"
 #include "include/rec.h"
 
+
+
 static const uint32_t kPageSize = 16384;
 
 char path[1024];
@@ -87,17 +89,72 @@ void ShowFILHeader(uint32_t page_num, uint16_t* type) {
   printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
-void ShowRecord(const rec_t *rec) {
+void hexDump(void *ptr, size_t size) {
+  uint8_t *p = reinterpret_cast<uint8_t *>(ptr);
+  uint8_t bytesNum = 0;
+  while (bytesNum < size) {
+    std::cout << std::hex << "0x" << static_cast<uint32_t>(p[bytesNum++]) << " ";
+
+  }
+  // for (int i = 0; i < 16; i++) {
+  //   printf("   ");
+  // }
+
+  // bytesNum = 0;
+  // while (bytesNum < size) {
+  //   printf("%c", (p[bytesNum] >= 0x20 && p[bytesNum] < 0x7f) ? p[bytesNum] : '.');
+  //   bytesNum++;
+  // }
+  std::cout << std::endl;
+} 
+
+void ShowRecord(rec_t *rec) {
   ulint heap_no = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
   printf("heap no %u\n", heap_no);
   printf("rec status %u\n", rec_get_status(rec));
 
+  if (rec_get_status(rec) >= 2) return;
+
   ulint offsets_[REC_OFFS_NORMAL_SIZE];
   memset(offsets_, 0, sizeof(offsets_));
+  // sysbench example init offsets
+
   offsets_[0] = REC_OFFS_NORMAL_SIZE;
 
-    
+  hexDump(rec, 4);
+  (*(((char *)(rec)) + 3)) ^= 0x80;
+  hexDump(rec, 4);
+  int pk = mach_read_from_4(rec);
+  unsigned char *dest = (unsigned char *)pk;
+  // hexDump(&rec, 4);
+
+  // hexDump(rec, 1);
+
+  // reinterpret_cast<uint8_t *>(rec) ^= 0x80;
+  // static_cast<unsigned char>(*dest[3]) ^= 0x80;
+  // (*unsigned char((unsigned char *)dest) ^= 0x80;
+  // hexDump(dest, 4);
+
+  int num = 1;
+  hexDump(&num, 4);
+  // pk = pk ^ 0x80;
+  // for (ptr = dest + len; ptr != dest;) {
+  //   *--ptr = *data++;
+  // }
+
+  // if (!field->is_flag_set(UNSIGNED_FLAG)) {
+  //   ((byte *)dest)[len - 1] ^= 0x80;
+  // }
+
+
+  int pos = 4 + 6 + 7;
+
+  // hexdump(pk, 4);
+  printf("cluster key %d\n", pk);
+  printf("pad key is %s\n", rec + pos + 4);
+  printf("p key is %s\n", rec + pos + 4 + 120);
 }
+
 void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Index Header\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
@@ -108,6 +165,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
     printf("ShowIndexHeader read error %d\n", ret);
     return;
   }
+
   printf("Number of Directory Slots: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER));
   printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
   printf("Number of Records: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
@@ -116,22 +174,24 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
   uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
-  if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
-    return;
-  }
+  // if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
+  //   return;
+  // }
   
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-  printf("infimum %d\n", PAGE_NEW_INFIMUM);
-  printf("supremum %d\n", PAGE_NEW_SUPREMUM);
+  // printf("infimum %d\n", PAGE_NEW_INFIMUM);
+  // printf("supremum %d\n", PAGE_NEW_SUPREMUM);
   while (1) {
-    ShowRecord(rec_ptr);
     ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
+    printf("off %u\n", off);
     // handle supremum
     // https://raw.githubusercontent.com/baotiao/bb/main/uPic/image-20211212031146188.png
     // off == 0 mean this is SUPREMUM record
     if (off == 0) {
       break;
     }
+    ShowRecord(rec_ptr);
+
     // off can't be negative, if the next record is less than current record
     // the rec_ptr + off will > 16kb
     // and the result & (UNIV_PAGE_SIZE - 1) will be less then current position
@@ -937,6 +997,7 @@ int main(int argc, char *argv[]) {
   } else {
     uint16_t type = 0;
     ShowFILHeader(user_page, &type);
+    // PrintUserRecord(user_page, &type);
     printf("\n");
     if (strcmp(command, "show-records") == 0) {
       is_show_records = true;
