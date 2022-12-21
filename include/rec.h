@@ -203,7 +203,7 @@ static inline uint16_t rec_get_bit_field_2(
 }
 /** The following function retrieves the status bits of a new-style record.
  @return status bits */
-[[nodiscard]] static inline ulint rec_get_status(
+static inline ulint rec_get_status(
     const rec_t *rec) /*!< in: physical record */
 {
   ulint ret;
@@ -253,7 +253,7 @@ static inline ulint rec_get_info_bits_temp(const rec_t *rec) {
 /** The following function is used to get the number of fields
  in an old-style record, which is stored in the rec
  @return number of data fields */
-[[nodiscard]] static inline uint16_t rec_get_n_fields_old_raw(
+static inline uint16_t rec_get_n_fields_old_raw(
     const rec_t *rec) /*!< in: physical record */
 {
   uint16_t ret;

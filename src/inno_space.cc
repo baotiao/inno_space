@@ -63,7 +63,7 @@ static void usage()
 
 
 void ShowFILHeader(uint32_t page_num, uint16_t* type) {
-  printf("=========================%lu's block==========================\n", page_num);
+  printf("=========================%u's block==========================\n", page_num);
   printf("FIL Header:\n");
   uint64_t offset = (uint64_t)kPageSize * (uint64_t)page_num;
 
@@ -151,8 +151,8 @@ void ShowBlobHeader(uint32_t page_num) {
     printf("ShowBlobHeader read error %d\n", ret);
     return;
   }
-  printf("BLOB part len on this page: %lu\n", mach_read_from_4(read_buf + PAGE_HEADER));
-  printf("BLOB next part page no: %lu\n", mach_read_from_4(read_buf + PAGE_HEADER + BTR_BLOB_HDR_NEXT_PAGE_NO));
+  printf("BLOB part len on this page: %u\n", mach_read_from_4(read_buf + PAGE_HEADER));
+  printf("BLOB next part page no: %u\n", mach_read_from_4(read_buf + PAGE_HEADER + BTR_BLOB_HDR_NEXT_PAGE_NO));
 
 }
 
@@ -169,8 +169,8 @@ void ShowBlobFirstPage(uint32_t page_num) {
   printf("BLOB FLAGS: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_FLAGS));
   printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_LOB_VERSION));
   printf("BLOB LAST_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_TRX_ID));
-  printf("BLOB LAST_UNDO_NO: %lu\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_UNDO_NO));
-  printf("BLOB DATA_LEN: %lu\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_DATA_LEN));
+  printf("BLOB LAST_UNDO_NO: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_UNDO_NO));
+  printf("BLOB DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_DATA_LEN));
   printf("BLOB TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_TRX_ID));
 }
 
@@ -200,7 +200,7 @@ void ShowBlobDataPage(uint32_t page_num) {
   }
 
   printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
-  printf("BLOB OFFSET_DATA_LEN: %lu\n", mach_read_from_4(read_buf + (ulint)BlobDataPage::OFFSET_DATA_LEN));
+  printf("BLOB OFFSET_DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobDataPage::OFFSET_DATA_LEN));
   printf("BLOB OFFSET_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobDataPage::OFFSET_TRX_ID));
 }
 
@@ -307,12 +307,12 @@ void ShowUndoLogHdr(uint32_t page_num, uint32_t page_offset)
 
   byte *undo_log_hdr = read_buf + page_offset;
 
-  printf("trx id: %u\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_ID));
-  printf("trx no: %u\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_NO));
-  printf("del marks: %u\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_DEL_MARKS));
-  printf("undo log start: %u\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_LOG_START));
-  printf("next undo log header: %u\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_NEXT_LOG));
-  printf("prev undo log header: %u\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_PREV_LOG));
+  printf("trx id: %lu\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_ID));
+  printf("trx no: %lu\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_NO));
+  printf("del marks: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_DEL_MARKS));
+  printf("undo log start: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_LOG_START));
+  printf("next undo log header: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_NEXT_LOG));
+  printf("prev undo log header: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_PREV_LOG));
 }
 
 void ShowUndoRseg(uint32_t rseg_id, uint32_t page_num)
@@ -367,7 +367,7 @@ void ShowUndoFile() {
     return;
   }
   int block_num = stat_buf.st_size / kPageSize;
-  printf("Undo File size %lu, blocks %lu\n", stat_buf.st_size, block_num);
+  printf("Undo File size %ld, blocks %d\n", stat_buf.st_size, block_num);
 
   uint32_t rseg_array[TRX_SYS_N_RSEGS];
   uint16_t type = 0;
@@ -725,31 +725,31 @@ static void fseg_print_low(space_id_t space_id,
                            fseg_inode_t *inode, uint32_t &free_page) /*!< in: segment inode */
 {
   space_id_t space;
-  ulint n_used;
-  ulint n_frag;
+  //ulint n_used;
+  //ulint n_frag;
   ulint n_free;
   ulint n_not_full;
   ulint n_full;
   ulint reserved;
   ulint used;
-  page_no_t page_no;
+  //page_no_t page_no;
   uint64_t seg_id;
   File_segment_inode fseg_inode(space_id, inode);
 
   space = page_get_space_id(align_page(inode));
-  page_no = page_get_page_no(align_page(inode));
+  //page_no = page_get_page_no(align_page(inode));
 
   reserved = fseg_n_reserved_pages_low(space_id, inode, &used);
 
   seg_id = mach_read_from_8(inode + FSEG_ID);
 
-  n_used = fseg_inode.read_not_full_n_used();
-  n_frag = fseg_get_n_frag_pages(inode);
+  //n_used = fseg_inode.read_not_full_n_used();
+  //n_frag = fseg_get_n_frag_pages(inode);
   n_free = flst_get_len(inode + FSEG_FREE);
   n_not_full = flst_get_len(inode + FSEG_NOT_FULL);
   n_full = flst_get_len(inode + FSEG_FULL);
 
-  printf("SEGMENT id %lu, space id %lu\n", seg_id, space);
+  printf("SEGMENT id %lu, space id %u\n", seg_id, space);
   printf("Extents information:\n");
   printf("FULL extent list size %u\n", n_full);
   printf("FREE extent list size %u\n", n_free);
@@ -779,7 +779,7 @@ void FindRootPage() {
   page_type_t page_type = 0;
   uint64_t offset;
   
-  space_id_t space_id;
+  space_id_t space_id = 0;
   bool is_primary = 0;
   for (int i = 0; i < block_num; i++) {
     offset = (uint64_t)kPageSize * (uint64_t)i;
@@ -835,7 +835,7 @@ void FindRootPage() {
   }
 
   printf("**Suggestion**\n");
-  printf("File size %lu, reserved but not used space %lu, percentage %.2lf\%\n", 
+  printf("File size %lu, reserved but not used space %lu, percentage %.2lf\n",
       stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
       (double)total_free_page * (double)kPageSize * 100.00 / stat_buf.st_size);
   printf("Optimize table will get new fie size %lu", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
