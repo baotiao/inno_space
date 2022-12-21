@@ -125,7 +125,7 @@ void ShowRecord(rec_t *rec) {
   (*(((char *)(rec)) + 3)) ^= 0x80;
   hexDump(rec, 4);
   int pk = mach_read_from_4(rec);
-  unsigned char *dest = (unsigned char *)pk;
+  // unsigned char *dest = static_cast<unsigned char *>pk;
   // hexDump(&rec, 4);
 
   // hexDump(rec, 1);
@@ -162,7 +162,8 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   int ret = pread(fd, read_buf, kPageSize, offset);
 
   if (ret == -1) {
-    printf("ShowIndexHeader read error %d\n", ret);
+    printf("ShowIndexHeader read error %d, is_show_records %d\n",
+           ret, is_show_records);
     return;
   }
 
@@ -173,7 +174,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
-  uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
+  // uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
   // if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
   //   return;
   // }
@@ -785,26 +786,26 @@ static void fseg_print_low(space_id_t space_id,
                            fseg_inode_t *inode, uint32_t &free_page) /*!< in: segment inode */
 {
   space_id_t space;
-  ulint n_used;
-  ulint n_frag;
+  // ulint n_used;
+  // ulint n_frag;
   ulint n_free;
   ulint n_not_full;
   ulint n_full;
   ulint reserved;
   ulint used;
-  page_no_t page_no;
+  // page_no_t page_no;
   uint64_t seg_id;
   File_segment_inode fseg_inode(space_id, inode);
 
   space = page_get_space_id(align_page(inode));
-  page_no = page_get_page_no(align_page(inode));
+  // page_no = page_get_page_no(align_page(inode));
 
   reserved = fseg_n_reserved_pages_low(space_id, inode, &used);
 
   seg_id = mach_read_from_8(inode + FSEG_ID);
 
-  n_used = fseg_inode.read_not_full_n_used();
-  n_frag = fseg_get_n_frag_pages(inode);
+  // n_used = fseg_inode.read_not_full_n_used();
+  // n_frag = fseg_get_n_frag_pages(inode);
   n_free = flst_get_len(inode + FSEG_FREE);
   n_not_full = flst_get_len(inode + FSEG_NOT_FULL);
   n_full = flst_get_len(inode + FSEG_FULL);
@@ -839,7 +840,7 @@ void FindRootPage() {
   page_type_t page_type = 0;
   uint64_t offset;
   
-  space_id_t space_id;
+  space_id_t space_id = UINT32_MAX;
   bool is_primary = 0;
   for (int i = 0; i < block_num; i++) {
     offset = (uint64_t)kPageSize * (uint64_t)i;
@@ -895,7 +896,7 @@ void FindRootPage() {
   }
 
   printf("**Suggestion**\n");
-  printf("File size %lu, reserved but not used space %lu, percentage %.2lf\%\n", 
+  printf("File size %lu, reserved but not used space %lu, percentage %.2lf%%\n", 
       stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
       (double)total_free_page * (double)kPageSize * 100.00 / stat_buf.st_size);
   printf("Optimize table will get new fie size %lu", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
