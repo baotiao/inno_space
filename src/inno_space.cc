@@ -99,6 +99,10 @@ void hexDump(void *ptr, size_t size) {
   std::cout << std::endl;
 } 
 
+// init offsets here
+ulint offsets_[REC_OFFS_NORMAL_SIZE];
+
+
 void ShowRecord(rec_t *rec) {
   ulint heap_no = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
   printf("heap no %u\n", heap_no);
@@ -106,8 +110,6 @@ void ShowRecord(rec_t *rec) {
 
   if (rec_get_status(rec) >= 2) return;
 
-  // init offsets here
-  ulint offsets_[REC_OFFS_NORMAL_SIZE];
   memset(offsets_, 0, sizeof(offsets_));
   // sysbench example init offsets
 
@@ -123,8 +125,8 @@ void ShowRecord(rec_t *rec) {
   // offsets_[7] = 141;
   // offsets_[8] = 201;
 
-  printf(" id: %u\n", (mach_read_from_4(rec)));
-  printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5])));
+  printf(" id: %u\n", (mach_read_from_4(rec) ^ 0x80000000));
+  printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
   printf("  c: %.5s\n", rec + offsets_[6]);
   // printf("pad: %.60s\n", rec + offsets_[7]);
   for (int i = 0; i < offsets_[1]; i++) {
