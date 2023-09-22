@@ -96,15 +96,6 @@ void hexDump(void *ptr, size_t size) {
     std::cout << std::hex << "0x" << static_cast<uint32_t>(p[bytesNum++]) << " ";
 
   }
-  // for (int i = 0; i < 16; i++) {
-  //   printf("   ");
-  // }
-
-  // bytesNum = 0;
-  // while (bytesNum < size) {
-  //   printf("%c", (p[bytesNum] >= 0x20 && p[bytesNum] < 0x7f) ? p[bytesNum] : '.');
-  //   bytesNum++;
-  // }
   std::cout << std::endl;
 } 
 
@@ -115,44 +106,31 @@ void ShowRecord(rec_t *rec) {
 
   if (rec_get_status(rec) >= 2) return;
 
+  // init offsets here
   ulint offsets_[REC_OFFS_NORMAL_SIZE];
   memset(offsets_, 0, sizeof(offsets_));
   // sysbench example init offsets
 
-  offsets_[0] = REC_OFFS_NORMAL_SIZE;
+  offsets_[0] = 100;
+  offsets_[1] = 5;
+  // offsets_[1] = 6;
+  offsets_[2] = 0;
+  offsets_[3] = 4;
+  offsets_[4] = 10;
+  offsets_[5] = 17;
+  offsets_[6] = 21;
+  offsets_[7] = 26;
+  // offsets_[7] = 141;
+  // offsets_[8] = 201;
 
-  hexDump(rec, 4);
-  (*(((char *)(rec)) + 3)) ^= 0x80;
-  hexDump(rec, 4);
-  int pk = mach_read_from_4(rec);
-  // unsigned char *dest = static_cast<unsigned char *>pk;
-  // hexDump(&rec, 4);
-
-  // hexDump(rec, 1);
-
-  // reinterpret_cast<uint8_t *>(rec) ^= 0x80;
-  // static_cast<unsigned char>(*dest[3]) ^= 0x80;
-  // (*unsigned char((unsigned char *)dest) ^= 0x80;
-  // hexDump(dest, 4);
-
-  int num = 1;
-  hexDump(&num, 4);
-  // pk = pk ^ 0x80;
-  // for (ptr = dest + len; ptr != dest;) {
-  //   *--ptr = *data++;
-  // }
-
-  // if (!field->is_flag_set(UNSIGNED_FLAG)) {
-  //   ((byte *)dest)[len - 1] ^= 0x80;
-  // }
-
-
-  int pos = 4 + 6 + 7;
-
-  // hexdump(pk, 4);
-  printf("cluster key %d\n", pk);
-  printf("pad key is %s\n", rec + pos + 4);
-  printf("p key is %s\n", rec + pos + 4 + 120);
+  printf(" id: %u\n", (mach_read_from_4(rec)));
+  printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5])));
+  printf("  c: %.5s\n", rec + offsets_[6]);
+  // printf("pad: %.60s\n", rec + offsets_[7]);
+  for (int i = 0; i < offsets_[1]; i++) {
+    printf("i %d ", i + 3);
+    hexDump(rec + offsets_[i + 2], offsets_[i + 3] - offsets_[i + 2]);
+  }
 }
 
 void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
