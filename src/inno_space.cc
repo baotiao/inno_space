@@ -102,38 +102,56 @@ void hexDump(void *ptr, size_t size) {
 // init offsets here
 ulint offsets_[REC_OFFS_NORMAL_SIZE];
 
+/** TRUE if the record is the supremum record on a page.
+ @return true if the supremum record */
+static inline bool page_rec_is_supremum_low(
+    ulint offset) /*!< in: record offset on page */
+{
+  return (offset == PAGE_NEW_SUPREMUM || offset == PAGE_OLD_SUPREMUM);
+}
+
+/** TRUE if the record is the infimum record on a page.
+ @return true if the infimum record */
+static inline bool page_rec_is_infimum_low(
+    ulint offset) /*!< in: record offset on page */
+{
+  return (offset == PAGE_NEW_INFIMUM || offset == PAGE_OLD_INFIMUM);
+}
+
 
 void ShowRecord(rec_t *rec) {
   ulint heap_no = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
   printf("heap no %u\n", heap_no);
   printf("rec status %u\n", rec_get_status(rec));
 
-  if (rec_get_status(rec) >= 2) return;
+  if (rec_get_status(rec) >= 2 || heap_no == 1) return;
 
   memset(offsets_, 0, sizeof(offsets_));
   // sysbench example init offsets
 
   offsets_[0] = 100;
   offsets_[1] = 5;
-  // offsets_[1] = 6;
   offsets_[2] = 0;
   offsets_[3] = 4;
   offsets_[4] = 10;
   offsets_[5] = 17;
   offsets_[6] = 21;
-  offsets_[7] = 26;
-  // offsets_[7] = 141;
-  // offsets_[8] = 201;
+  offsets_[7] = 141;
+  offsets_[8] = 201;
 
+  ulint is_delete = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_DELETED_FLAG,
+                                      REC_INFO_BITS_SHIFT);
+  ulint is_min_record = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_MIN_REC_FLAG,
+                                      REC_INFO_BITS_SHIFT);
+
+  printf("Info Flags: is_deleted %d is_min_record %d\n", is_delete, is_min_record); 
   printf(" id: %u\n", (mach_read_from_4(rec) ^ 0x80000000));
   printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
-  printf("  c: %.5s\n", rec + offsets_[6]);
-  // printf("pad: %.60s\n", rec + offsets_[7]);
-  for (int i = 0; i < offsets_[1]; i++) {
-    printf("i %d ", i + 3);
-    hexDump(rec + offsets_[i + 2], offsets_[i + 3] - offsets_[i + 2]);
-  }
+  printf("  c: %.120s\n", rec + offsets_[6]);
+  printf("pad: %.60s\n", rec + offsets_[7]);
+  printf("\n");
 }
+
 
 void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Index Header:\n");
@@ -160,24 +178,28 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   }
   
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-  // printf("infimum %d\n", PAGE_NEW_INFIMUM);
-  // printf("supremum %d\n", PAGE_NEW_SUPREMUM);
+  printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
+  printf("infimum %d\n", PAGE_NEW_INFIMUM);
+  printf("supremum %d\n", PAGE_NEW_SUPREMUM);
   while (1) {
+    // offset from previous record
     ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
-    printf("off %u\n", off);
-    // handle supremum
-    // https://raw.githubusercontent.com/baotiao/bb/main/uPic/image-20211212031146188.png
-    // off == 0 mean this is SUPREMUM record
-    if (off == 0) {
-      break;
-    }
-    ShowRecord(rec_ptr);
-
+    // off = (((ulong)((rec_ptr + off))) & (UNIV_PAGE_SIZE - 1));
+    printf("offset from previous record %hu\n", off);
     // off can't be negative, if the next record is less than current record
     // the rec_ptr + off will > 16kb
     // and the result & (UNIV_PAGE_SIZE - 1) will be less then current position
+    // after this, off is offset inside page offset
     off = (((ulong)((rec_ptr + off))) & (UNIV_PAGE_SIZE - 1));
+    printf("offset inside page %hu\n", off);
+    // handle supremum
+    // https://raw.githubusercontent.com/baotiao/bb/main/uPic/image-20211212031146188.png
+    // off == 0 mean this is SUPREMUM record
+    if (page_rec_is_supremum_low(off)) {
+      break;
+    }
     rec_ptr = read_buf + off;
+    ShowRecord(rec_ptr);
   }
 
 }
