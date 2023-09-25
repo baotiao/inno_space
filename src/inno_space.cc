@@ -5,11 +5,21 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
+#include <vector>
+#include <iostream>
+#include <fstream>
 
 #include <sys/stat.h>
 
 #include <cstdlib>
 #include <iostream>
+
+#include <rapidjson/document.h>
+#include <rapidjson/error/en.h>
+#include <rapidjson/filewritestream.h>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <rapidjson/prettywriter.h>
 
 #include "include/fil0fil.h"
 #include "include/page0page.h"
@@ -25,11 +35,17 @@
 
 static const uint32_t kPageSize = 16384;
 
+// global variables
 char path[1024];
 int fd;
 
 byte* read_buf;
 byte* inode_page_buf;
+
+// init offsets here
+ulint offsets_[REC_OFFS_NORMAL_SIZE];
+
+std::vector<std::string> col_names;
 
 static void usage()
 {
@@ -99,9 +115,6 @@ void hexDump(void *ptr, size_t size) {
   std::cout << std::endl;
 } 
 
-// init offsets here
-ulint offsets_[REC_OFFS_NORMAL_SIZE];
-
 /** TRUE if the record is the supremum record on a page.
  @return true if the supremum record */
 static inline bool page_rec_is_supremum_low(
@@ -118,6 +131,83 @@ static inline bool page_rec_is_infimum_low(
   return (offset == PAGE_NEW_INFIMUM || offset == PAGE_OLD_INFIMUM);
 }
 
+int rec_init_offsets() {
+  // Specify the file path
+  std::string file_path = "./tool/sbtest1.json";
+
+  // Open the file for reading
+  std::ifstream file(file_path);
+
+  // Check if the file is open
+  if (!file.is_open()) {
+    std::cerr << "Failed to open json the file." << std::endl;
+    return 1;
+  }
+
+  // Create a string to store the file contents
+  std::string file_contents;
+
+  // Read the file and append its contents to the string
+  std::string line;
+  while (std::getline(file, line)) {
+    file_contents += line + '\n';
+  }
+
+  // std::cout << file_contents;
+  // Close the file
+  file.close();
+
+  rapidjson::Document d;
+  d.Parse(file_contents.c_str());
+
+  // the sysbench offsets array
+  // offsets[0] 100   // 这个值默认初始化成100, 数组的元素个数, 没用
+  // offsets[1] 6  // 除了默认offsets[0, 1, 2] 三列以后, 剩下的其他列的个数, 是table 里面列的个数+ 2(trx_id 和 rollptr), 从offset[3] 开始
+  // offsets[2] 2147483653  //extra size
+  // offsets[3] 4  // id 这个列
+  // offsets[4] 10  // 根据record format 可以看出, 这个是trx_id
+  // offsets[5] 17  // 根据record format 可以看出, 这个是rollptr
+  // offsets[6] 21 // k 这个列 
+  // offsets[7] 141 // c 这个列
+  // offsets[8] 201 // pad 这个列,   201 + offset[2](如果有extra size) 就是整个rec 的大小
+
+  
+  // init offsets array from here
+  // previous code parse the json file
+  memset(offsets_, 0, sizeof(offsets_));
+  offsets_[0] = REC_OFFS_NORMAL_SIZE;
+
+  offsets_[1] = d[1]["object"]["dd_object"]["columns"].Size();
+  // TODO: init extra size
+  offsets_[2] = 0;
+
+  col_names.resize(REC_OFFS_NORMAL_SIZE);
+  std::string stmp;
+  col_names[3] = d[1]["object"]["dd_object"]["columns"][3]["name"].GetString();
+  stmp = d[1]["object"]["dd_object"]["columns"][0]["column_type_utf8"].GetString();
+  if (stmp == "int") {
+    offsets_[3] = 4; 
+  } else if (stmp.substr(0, 4) == "char") {
+    offsets_[3] = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
+  } else {
+    return -1;
+  }
+  offsets_[4] = offsets_[3] + 6;
+  offsets_[5] = offsets_[4] + 7;
+
+  for (int i = 1; i < offsets_[1] - 2; i++) {
+    col_names[i + 5] = d[1]["object"]["dd_object"]["columns"][i]["name"].GetString();
+    stmp = d[1]["object"]["dd_object"]["columns"][i]["column_type_utf8"].GetString();
+    if (stmp == "int") {
+      offsets_[i + 5] = offsets_[i + 4] + 4;
+    } else if (stmp.substr(0, 4) == "char") {
+      offsets_[i + 5] = offsets_[i + 4] + d[1]["object"]["dd_object"]["columns"][i]["char_length"].GetInt();
+    } else {
+      return -1;
+    }
+  }
+  return 0;
+}
 
 void ShowRecord(rec_t *rec) {
   ulint heap_no = rec_get_bit_field_2(rec, REC_NEW_HEAP_NO, REC_HEAP_NO_MASK, REC_HEAP_NO_SHIFT);
@@ -126,26 +216,14 @@ void ShowRecord(rec_t *rec) {
 
   if (rec_get_status(rec) >= 2 || heap_no == 1) return;
 
-  memset(offsets_, 0, sizeof(offsets_));
-  // sysbench example init offsets
-
-  offsets_[0] = 100;
-  offsets_[1] = 5;
-  offsets_[2] = 0;
-  offsets_[3] = 4;
-  offsets_[4] = 10;
-  offsets_[5] = 17;
-  offsets_[6] = 21;
-  offsets_[7] = 141;
-  offsets_[8] = 201;
-
   ulint is_delete = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_DELETED_FLAG,
                                       REC_INFO_BITS_SHIFT);
   ulint is_min_record = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_MIN_REC_FLAG,
                                       REC_INFO_BITS_SHIFT);
 
+  
   printf("Info Flags: is_deleted %d is_min_record %d\n", is_delete, is_min_record); 
-  printf(" id: %u\n", (mach_read_from_4(rec) ^ 0x80000000));
+  printf(" %s: %u\n", col_names[3].c_str(), (mach_read_from_4(rec) ^ 0x80000000));
   printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
   printf("  c: %.120s\n", rec + offsets_[6]);
   printf("pad: %.60s\n", rec + offsets_[7]);
@@ -177,6 +255,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
     return;
   }
   
+  rec_init_offsets();
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
   printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
   printf("infimum %d\n", PAGE_NEW_INFIMUM);
