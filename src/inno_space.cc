@@ -37,6 +37,7 @@ static const uint32_t kPageSize = 16384;
 
 // global variables
 char path[1024];
+char sdi_path[1024];
 int fd;
 
 byte* read_buf;
@@ -138,11 +139,8 @@ static inline bool page_rec_is_infimum_low(
 }
 
 int rec_init_offsets() {
-  // Specify the file path
-  std::string file_path = "./tool/sbtest1.json";
-
   // Open the file for reading
-  std::ifstream file(file_path);
+  std::ifstream file(sdi_path);
 
   // Check if the file is open
   if (!file.is_open()) {
@@ -1037,17 +1035,22 @@ int main(int argc, char *argv[]) {
 
   uint32_t user_page = 0;
   bool path_opt = false;
+  bool sdi_path_opt = false;
   char c;
   bool show_file = true;
   bool delete_page = false;
   bool update_checksum = false;
   bool is_show_records = false;
   char command[128];
-  while (-1 != (c = getopt(argc, argv, "hf:p:d:u:c:"))) {
+  while (-1 != (c = getopt(argc, argv, "hf:s:p:d:u:c:"))) {
     switch (c) {
       case 'f':
         snprintf(path, 1024, "%s", optarg);
         path_opt = true;
+        break;
+      case 's':
+        snprintf(sdi_path, 1024, "%s", optarg);
+        sdi_path_opt = true;
         break;
       case 'p':
         show_file = false;
@@ -1112,6 +1115,11 @@ int main(int argc, char *argv[]) {
     // PrintUserRecord(user_page, &type);
     printf("\n");
     if (strcmp(command, "show-records") == 0) {
+      if (sdi_path_opt == false) {
+        fprintf(stderr, "Please specify the sdi file path\n");
+        usage();
+        exit(-1);
+      }
       is_show_records = true;
     }
     if (type == FIL_PAGE_TYPE_BLOB) {
