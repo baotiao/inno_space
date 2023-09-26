@@ -13,7 +13,8 @@ Another interesting feature in Inno_space is it can by pass some corrupt page, i
 * Support read all block in ibd file 
 * Support read the specify block in the ibd file
 * Support remove corrupt page in ibd file
-* Support update page's check some
+* Support update page's checksum
+* **Support dump record**
 
 
 ## Usage
@@ -44,6 +45,8 @@ Delete specify page
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
 Update specify page checksum
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2
+Show record in specified page
+./inno -f  ~/git/db8r/dbs2250/sbtest/sbtest1.ibd  -p 100 -c show-records -s ./tool/sbtest1.json
 
 Example1:
 Show basic file space information
