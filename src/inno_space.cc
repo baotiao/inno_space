@@ -45,7 +45,13 @@ byte* inode_page_buf;
 // init offsets here
 ulint offsets_[REC_OFFS_NORMAL_SIZE];
 
-std::vector<std::string> col_names;
+struct dict_col {
+  std::string col_name;
+  std::string column_type_utf8;
+  int char_length;
+};
+
+std::vector<dict_col> dict_cols;
 
 static void usage()
 {
@@ -181,14 +187,14 @@ int rec_init_offsets() {
   // TODO: init extra size
   offsets_[2] = 0;
 
-  col_names.resize(REC_OFFS_NORMAL_SIZE);
-  std::string stmp;
-  col_names[3] = d[1]["object"]["dd_object"]["columns"][3]["name"].GetString();
-  stmp = d[1]["object"]["dd_object"]["columns"][0]["column_type_utf8"].GetString();
-  if (stmp == "int") {
+  dict_cols.resize(REC_OFFS_NORMAL_SIZE);
+  dict_cols[3].col_name = d[1]["object"]["dd_object"]["columns"][0]["name"].GetString();
+  dict_cols[3].column_type_utf8 = d[1]["object"]["dd_object"]["columns"][0]["column_type_utf8"].GetString();
+  if (dict_cols[3].column_type_utf8 == "int") {
     offsets_[3] = 4; 
-  } else if (stmp.substr(0, 4) == "char") {
+  } else if (dict_cols[3].column_type_utf8.substr(0, 4) == "char") {
     offsets_[3] = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
+    dict_cols[3].char_length = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
   } else {
     return -1;
   }
@@ -196,11 +202,14 @@ int rec_init_offsets() {
   offsets_[5] = offsets_[4] + 7;
 
   for (int i = 1; i < offsets_[1] - 2; i++) {
-    col_names[i + 5] = d[1]["object"]["dd_object"]["columns"][i]["name"].GetString();
-    stmp = d[1]["object"]["dd_object"]["columns"][i]["column_type_utf8"].GetString();
-    if (stmp == "int") {
+    dict_cols[i + 5].col_name = d[1]["object"]["dd_object"]["columns"][i]["name"].GetString();
+    dict_cols[i + 5].column_type_utf8
+      = d[1]["object"]["dd_object"]["columns"][i]["column_type_utf8"].GetString();
+    if (dict_cols[i + 5].column_type_utf8 == "int") {
       offsets_[i + 5] = offsets_[i + 4] + 4;
-    } else if (stmp.substr(0, 4) == "char") {
+      dict_cols[i + 5].char_length = 4;
+    } else if (dict_cols[i + 5].column_type_utf8.substr(0, 4) == "char") {
+      dict_cols[i + 5].char_length = d[1]["object"]["dd_object"]["columns"][i]["char_length"].GetInt();
       offsets_[i + 5] = offsets_[i + 4] + d[1]["object"]["dd_object"]["columns"][i]["char_length"].GetInt();
     } else {
       return -1;
@@ -220,14 +229,33 @@ void ShowRecord(rec_t *rec) {
                                       REC_INFO_BITS_SHIFT);
   ulint is_min_record = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_MIN_REC_FLAG,
                                       REC_INFO_BITS_SHIFT);
-
   
   printf("Info Flags: is_deleted %d is_min_record %d\n", is_delete, is_min_record); 
-  printf(" %s: %u\n", col_names[3].c_str(), (mach_read_from_4(rec) ^ 0x80000000));
-  printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
-  printf("  c: %.120s\n", rec + offsets_[6]);
-  printf("pad: %.60s\n", rec + offsets_[7]);
+
+  printf("%s: ", dict_cols[3].col_name.c_str());
+  if (dict_cols[3].column_type_utf8 == "int") {
+    printf("%u ", (mach_read_from_4(rec) ^ 0x80000000));
+  } else {
+    printf("%.*s", dict_cols[3].char_length, rec);
+  }
   printf("\n");
+
+  for (int i = 1; i < offsets_[1] - 2; i++) {
+    printf("%s: ", dict_cols[i + 5].col_name.c_str());
+    if (dict_cols[i + 5].column_type_utf8 == "int") {
+      printf("%u ", (mach_read_from_4(rec + offsets_[i + 4]) ^ 0x80000000));
+    } else {
+      printf("%.*s", dict_cols[i + 5].char_length, rec + offsets_[i + 4]);
+    }
+    printf("\n");
+  }
+
+
+  // printf(" %s: %u\n", col_names[3].c_str(), (mach_read_from_4(rec) ^ 0x80000000));
+  // printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
+  // printf("  c: %.120s\n", rec + offsets_[6]);
+  // printf("pad: %.60s\n", rec + offsets_[7]);
+  // printf("\n");
 }
 
 
@@ -257,10 +285,11 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   
   rec_init_offsets();
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-  printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
-  printf("infimum %d\n", PAGE_NEW_INFIMUM);
-  printf("supremum %d\n", PAGE_NEW_SUPREMUM);
+  // printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
+  // printf("infimum %d\n", PAGE_NEW_INFIMUM);
+  // printf("supremum %d\n", PAGE_NEW_SUPREMUM);
   while (1) {
+    printf("\n");
     // offset from previous record
     ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
     // off = (((ulong)((rec_ptr + off))) & (UNIV_PAGE_SIZE - 1));
@@ -279,6 +308,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
     }
     rec_ptr = read_buf + off;
     ShowRecord(rec_ptr);
+    printf("\n");
   }
 
 }
