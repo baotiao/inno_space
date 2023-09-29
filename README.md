@@ -46,7 +46,10 @@ Delete specify page
 Update specify page checksum
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2
 Show record in specified page
-./inno -f  ~/git/db8r/dbs2250/sbtest/sbtest1.ibd  -p 100 -c show-records -s ./tool/sbtest1.json
+./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -p 100 -c show-records -s ./tool/sbtest1.json
+Dump All records in .ibd file
+./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -c dump-all-records -s ./tool/sbtest1.json
+
 
 Example1:
 Show basic file space information
@@ -168,7 +171,6 @@ Index ID: 142
 
 Example 4:
 
-
 Try to write some corrupt data to data file
 printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' | dd of=../primary/dbs2250/sbtest/sbtest1.ibd bs=1 seek=172032 count=100 conv=notrunc
 The database will crash after visit the data
@@ -186,8 +188,51 @@ Update specify page checksum
 
 Start mysqld, the database can be started success
 
-```
 
-## Contact Us
+Exapmle 5:
+Try to show record in specified page number
+
+./inno -f /home/zongzhi.czz/git/db8r/dbs2250/sbtest/sbtest1.ibd -c show-records -p 10  -s ./tool/sbtest1.json
+
+File path /home/zongzhi.czz/git/db8r/dbs2250/sbtest/sbtest1.ibd path, page num 10
+=========================10's block==========================
+FIL Header:
+CheckSum: 613295053
+Page number: 10
+Previous Page: 9
+Next Page: 11
+Page LSN: 92471792635
+Page Type: 17855
+Flush LSN: 0
+
+Index Header:
+Number of Directory Slots: 19
+Garbage Space: 0
+Number of Records: 73
+Max Trx id: 0
+Page level: 0
+Index ID: 359
+
+offset from previous record 26
+offset inside page 125
+heap no 2
+rec status 0
+Info Flags: is_deleted 0 is_min_record 0
+id: 329
+k: 67746
+c: 25087106756-05358861945-28639810730-70293660170-58309876130-54681200436-23663683142-92420314539-18642450369-82863665005
+pad: 39869284856-57048363201-54479788494-88842253993-52056631753
+... 
+then all the records in page num 10
+
+
+``` 
+
+Read more about InnoDB file_space:
+
+[1]: https://blog.jcole.us/innodb/
+[2]: http://baotiao.github.io/2021/11/29/inno-space.html
+
+### Contact Us
 
 Author: baotiao@gmail.com

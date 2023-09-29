@@ -199,7 +199,7 @@ int rec_init_offsets() {
   offsets_[4] = offsets_[3] + 6;
   offsets_[5] = offsets_[4] + 7;
 
-  for (int i = 1; i < offsets_[1] - 2; i++) {
+  for (uint32_t i = 1; i < offsets_[1] - 2; i++) {
     dict_cols[i + 5].col_name = d[1]["object"]["dd_object"]["columns"][i]["name"].GetString();
     dict_cols[i + 5].column_type_utf8
       = d[1]["object"]["dd_object"]["columns"][i]["column_type_utf8"].GetString();
@@ -238,7 +238,7 @@ void ShowRecord(rec_t *rec) {
   }
   printf("\n");
 
-  for (int i = 1; i < offsets_[1] - 2; i++) {
+  for (uint32_t i = 1; i < offsets_[1] - 2; i++) {
     printf("%s: ", dict_cols[i + 5].col_name.c_str());
     if (dict_cols[i + 5].column_type_utf8 == "int") {
       printf("%u ", (mach_read_from_4(rec + offsets_[i + 4]) ^ 0x80000000));
@@ -934,11 +934,11 @@ static void fseg_print_low(space_id_t space_id,
   return;
 }
 
-void FindRootPage() {
+void ShowIndexSummary() {
   struct stat stat_buf;
   int ret = fstat(fd, &stat_buf);
   if (ret == -1) {
-    printf("ShowFile read error %d\n", ret);
+    printf("ShowIndexSummary read error %d\n", ret);
     return;
   }
 
@@ -963,6 +963,7 @@ void FindRootPage() {
     if (page_type == FIL_PAGE_INDEX) {
       if (btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_LEAF + read_buf, space_id)
           && btr_root_fseg_validate(FIL_PAGE_DATA + PAGE_BTR_SEG_TOP + read_buf, space_id)) {
+        printf("iiiiiiiiiiiiiiiiiiiiiiiiiiii %d\n", i);
         if (is_primary == 0) {
           printf("========Primary index========\n");
           printf("Primary index root page space_id %u page_no %d\n", space_id, i);
@@ -1008,9 +1009,71 @@ void FindRootPage() {
   printf("File size %lu, reserved but not used space %lu, percentage %.2lf%%\n", 
       stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
       (double)total_free_page * (double)kPageSize * 100.00 / stat_buf.st_size);
-  printf("Optimize table will get new fie size %lu", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
+  printf("Optimize table will get new fie size %lu\n", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
 
   return;
+}
+
+void DumpAllRecords() {
+  // first primary index root page always in page 4
+  // we have other way to find it, for simplicy dirctly assign it to 4
+  uint32_t root_page_id = 4;
+
+  uint64_t offset = (uint64_t)kPageSize * (uint64_t)root_page_id;
+
+  int ret = pread(fd, read_buf, kPageSize, offset);
+  if (ret == -1) {
+    printf("DumpAllRecords read error %d\n", ret);
+    return;
+  }
+  uint16_t page_level = mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL);
+  // Reach leftmost leaf page
+
+  std::cout << page_level << std::endl;
+  uint32_t curr_page = root_page_id;
+  while (1) {
+    printf("curr_page %u %hu\n", curr_page, page_level);
+    byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
+    ulint off = mach_read_from_2(rec_ptr - REC_NEXT); 
+
+    page_no_t child_page_num =
+        mach_read_from_4(rec_ptr + off + 4);
+
+    printf("Next leftmost child page number is %u\n", child_page_num);
+    uint64_t curr_page_level = page_level;
+
+    offset = (uint64_t)kPageSize * (uint64_t)child_page_num;
+
+    ret = pread(fd, read_buf, kPageSize, offset);
+    if (ret == -1) {
+      printf("DumpAllRecords read error %d\n", errno);
+      return;
+    }
+    if (page_level == 0) {
+      break;
+    }
+    page_level = mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL);
+    if (page_level != curr_page_level - 1) {
+      break;
+    }
+
+    curr_page = child_page_num;
+  }
+  uint32_t next_page = 0;
+  while (next_page != 4294967295) {
+    ShowIndexHeader(curr_page, true);
+    next_page = mach_read_from_4(read_buf + FIL_PAGE_NEXT);
+    printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
+
+    curr_page = next_page;
+    offset = (uint64_t)kPageSize * (uint64_t)curr_page;
+
+    ret = pread(fd, read_buf, kPageSize, offset);
+    if (ret == -1) {
+      printf("DumpAllRecords read error %d\n", errno);
+      return;
+    }
+  }
 }
 
 void ShowSpaceIndexs() {
@@ -1097,18 +1160,17 @@ int main(int argc, char *argv[]) {
   posix_memalign((void**)&read_buf, kPageSize, kPageSize);
 
   if (show_file == true) {
-    // ShowFile();
-    // ShowExtent();
     ShowSpaceHeader();
     if (strcmp(command, "list-page-type") == 0) {
       ShowSpacePageType();
     } else if (strcmp(command, "index-summary") == 0) {
-      FindRootPage();
+      ShowIndexSummary();
       // ShowSpaceIndexs();
     } else if (strcmp(command, "show-undo-file") == 0) {
       ShowUndoFile();
+    } else if (strcmp(command, "dump-all-records") == 0) {
+      DumpAllRecords();
     }
-
   } else {
     uint16_t type = 0;
     ShowFILHeader(user_page, &type);
