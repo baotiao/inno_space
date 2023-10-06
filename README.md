@@ -1,59 +1,57 @@
 ## Introduction
 
-Inno_space is command tool to access InnoDB ibd file directly. It can parse the file give you detail information about the table. It can also fix corrupt page.
+Inno_space is a command-line tool designed for direct access to InnoDB (.ibd) files. It offers the capability to parse these files, providing detailed table information, and it can also assist in fixing corrupt pages. Inno_space converts .ibd files into human-readable formats, inspired by Jeremy Cole's inno_ruby. Unlike inno_ruby, Inno_space supports MySQL 8.0 and is implemented in C++, eliminating the need to set up a Ruby environment.
 
-It parse the .ibd file to human readable format. The origin idea come from Jeremy Cole's inno_ruby. However, inno_ruby don't support MySQL8.0, and it is written in ruby, which hard to make the environment. 
+An intriguing feature of Inno_space is its ability to bypass corrupt pages. In cases where a database won't start due to corruption in some pages, Inno_space can delete the corrupt page, allowing the database to start. This results in the loss of only one page, with other data remaining retrievable.
 
-Inno_space is written in c++ and it doesn't rely on any library. You only need get the source code and Type `make` then everything get done. You don't need make the boring ruby environment.
+## Features
 
-Another interesting feature in Inno_space is it can by pass some corrupt page, if some pages in database corrupt, it can't startup. Inno_space can delete the corrupt page and then the database can startup. The database only loose one page, the other data can still retrieve.
-
-## Feature
-
-* Support read all block in ibd file 
-* Support read the specify block in the ibd file
-* Support remove corrupt page in ibd file
-* Support update page's checksum
-* **Support dump record**
-
+* Supports reading all blocks in .ibd files.
+* Allows reading a specific block within the .ibd file.
+* Provides the capability to remove corrupt pages in .ibd files.
+* Supports updating page checksums.
+* **Supports dumping records from .ibd files.**
 
 ## Usage
 
-```
-Inno space
+```shell
+Inno_space
 usage: inno [-h] [-f test/t.ibd] [-p page_num]
         -h                -- show this help
         -f test/t.ibd     -- ibd file
-                -c list-page-type      -- show all page type
+                -c list-page-type      -- show all page types
                 -c index-summary       -- show indexes information
-                -c show-undo-file       -- show undo log detail
+                -c show-undo-file      -- show undo log detail
         -p page_num       -- show page information
                 -c show-records        -- show all records information
         -u page_num       -- update page checksum
         -d page_num       -- delete page
+
 Example:
 ====================================================
-Show sbtest1.ibd all page type
+Show sbtest1.ibd all page types
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type
 Show sbtest1.ibd all indexes information
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary
 Show undo_001 all rseg information
 ./inno -f ~/git/primary/dbs2250/log/undo_001 -c show-undo-file
-Show specify page information
+Show specified page information
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
-Delete specify page
+Delete specified page
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
-Update specify page checksum
+Update specified page checksum
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2
-Show record in specified page
+Show records in specified page
 ./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -p 100 -c show-records -s ./tool/sbtest1.json
-Dump All records in .ibd file
+Dump all records in .ibd file
 ./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -c dump-all-records -s ./tool/sbtest1.json
 
+```
 
-Example1:
+**Example1:**
 Show basic file space information
 
+```shell
 └─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c list-page-type
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 0
 page num 0
@@ -81,9 +79,12 @@ start           end             count           type
 65538           81919           16382           INDEX PAGE
 81920           81920           1               XDES
 
+```
 
-Example 2:
+**Example 2:**
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c index-summary
+
+```shell
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 0
 ==========================Space Header==========================
 Space ID: 15
@@ -94,7 +95,7 @@ Next Seg ID: 7
 File size 2604662784
 ========Primary index========
 Primary index root page space_id 15 page_no 4
-Btree hight: 2
+Btree height: 2
 <<<Leaf page segment>>>
 SEGMENT id 4, space id 15
 Extents information:
@@ -119,7 +120,7 @@ Free page num: 44
 
 ========Secondary index========
 Secondary index root page space_id 15 page_no 31940
-Btree hight: 2
+Btree height: 2
 <<<Leaf page segment>>>
 SEGMENT id 6, space id 15
 Extents information:
@@ -145,10 +146,12 @@ Free page num: 0
 **Suggestion**
 File size 2604662784, reserved but not used space 39354368, percentage 1.51%
 Optimize table will get new fie size 2565308416
+```
 
-Example 3:
-Show specify page information
+**Example 3:**
+Show specific page information
 
+```shell
 └─[$] ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
 File path /home/zongzhi.czz/git/primary/dbs2250/sbtest/sbtest1.ibd path, page num 10
 ==========================block==========================
@@ -168,30 +171,34 @@ Number of Records: 73
 Max Trx id: 0
 Page level: 0
 Index ID: 142
+```
 
 Example 4:
 
+```shell
 Try to write some corrupt data to data file
 printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' | dd of=../primary/dbs2250/sbtest/sbtest1.ibd bs=1 seek=172032 count=100 conv=notrunc
-The database will crash after visit the data
+The database will crash after visiting the data
 The log is:
 
 2021-12-14T09:21:19.230754Z 9 [ERROR] [MY-030043] [InnoDB] InnoDB: Corrupt page resides in file: ./sbtest/sbtest1.ibd, offset: 163840, len: 16384
 2021-12-14T09:21:19.230768Z 9 [ERROR] [MY-011906] [InnoDB] Database page corruption on disk or a failed file read of page [page id: space=15, page number=10]. You may have to recover from a backup.
-2021-12-14T09:21:19.230775Z 9 [Note] [MY-011876] [InnoDB] Page dump in ascii and hex (16384 bytes):
+2021-12-14T09:21:19.230775Z 9 [Note] [MY-011876] [InnoDB] Page dump in ASCII and hex (16384 bytes):
 
-Delete specify page
+Delete specified page
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -d 10
 
-Update specify page checksum
+Update specified page checksum
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -u 10
+```
 
-Start mysqld, the database can be started success
+Start mysqld, and the database can be started successfully
 
+**Example 5:**
 
-Exapmle 5:
-Try to show record in specified page number
+Try to show records on a specified page number
 
+```shell
 ./inno -f /home/zongzhi.czz/git/db8r/dbs2250/sbtest/sbtest1.ibd -c show-records -p 10  -s ./tool/sbtest1.json
 
 File path /home/zongzhi.czz/git/db8r/dbs2250/sbtest/sbtest1.ibd path, page num 10
@@ -213,26 +220,29 @@ Max Trx id: 0
 Page level: 0
 Index ID: 359
 
-offset from previous record 26
-offset inside page 125
+offset from the previous record 26
+offset inside the page 125
 heap no 2
-rec status 0
-Info Flags: is_deleted 0 is_min_record 0
+record status 0
+Info Flags: is_deleted 0, is_min_record 0
 id: 329
 k: 67746
 c: 25087106756-05358861945-28639810730-70293660170-58309876130-54681200436-23663683142-92420314539-18642450369-82863665005
 pad: 39869284856-57048363201-54479788494-88842253993-52056631753
 ... 
-then all the records in page num 10
+then all the records on page num 10
+
+```
 
 
-``` 
+
+
 
 Read more about InnoDB file_space:
 
-[1]: https://blog.jcole.us/innodb/
-[2]: http://baotiao.github.io/2021/11/29/inno-space.html
+https://blog.jcole.us/innodb/
+
+http://baotiao.github.io/2021/11/29/inno-space.html
 
 ### Contact Us
-
-Author: baotiao@gmail.com
+If you have any questions or need assistance, feel free to contact the author at baotiao@gmail.com
