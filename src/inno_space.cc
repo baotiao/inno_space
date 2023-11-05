@@ -301,9 +301,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
       printf("slot %d, size %hu, data ", i, slot_i_offset);
     }
 
-    byte *infi_rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-    ulint first_record_off = mach_read_from_2(infi_rec_ptr - REC_NEXT); 
-    for (uint16_t j = 0; j < (first_record_off - prev_page_base_offset); j++) {
+    for (uint16_t j = 0; j < (n_bytes - prev_page_base_offset); j++) {
       printf("%c",mach_read_from_1(base_ptr + prev_page_base_offset + j));
     }
     printf("\n");
