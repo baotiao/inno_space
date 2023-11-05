@@ -89,6 +89,25 @@ new-style compact page */
 /* offset of the page supremum record end on
 a new-style compact page */
 /*-----------------------------*/
+/* Used flags in field PAGE_N_HEAP */
+/* New-style compact page format */
+#define PAGE_IS_COMPACT 0x8000
+/* Page has symbol table for encoding */
+#define PAGE_HAS_SYMBOL_TABLE 0x4000
+
+#define PAGE_N_HEAP_MASK (0xFFFF & ~(PAGE_IS_COMPACT | PAGE_HAS_SYMBOL_TABLE))
+
+constexpr byte PAGE_SYMBOL_TABLE_HEADER_MAGIC = 0x6a;
+/*------------- DEFINE for symbol table ---------------*/
+#define PAGE_SYMBOL_TABLE_MAGIC 0
+#define PAGE_SYMBOL_TABLE_TYPE 1
+#define PAGE_SYMBOL_TABLE_N_BYTES 2
+#define PAGE_SYMBOL_TABLE_N_SLOTS 4
+#define PAGE_SYMBOL_TABLE_SLOTS 5
+
+#define PAGE_SYMBOL_TABLE_HEADER_SIZE PAGE_SYMBOL_TABLE_SLOTS
+#define PAGE_SYMBOL_TABLE_SLOT_SIZE 2
+#define PAGE_SYMBOL_TABLE_MAX_N_SLOTS ((1UL << 8) - 1)
 
 /* Heap numbers */
 #define PAGE_HEAP_NO_INFIMUM 0  /* page infimum */

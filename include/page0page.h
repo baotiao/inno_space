@@ -6,6 +6,7 @@
 #include "include/page0types.h"
 #include "include/fil0types.h"
 #include "include/fut0lst.h"
+#include "include/mach_data.h"
 
 /*			PAGE HEADER
         ===========
@@ -272,5 +273,12 @@ page_no_t page_get_page_no(const page_t *page); /*!< in: page */
 space_id_t page_get_space_id(const page_t *page); /*!< in: page */
 
 page_t *align_page(const void* ptr);
+
+/** Reads the given header field. */
+ulint page_header_get_field(const page_t *page, ulint field);        /*!< in: PAGE_LEVEL, ... */
+
+/** Gets the number of records in the heap.
+ *  @return number of user records */
+ulint page_dir_get_n_heap(const page_t *page);
 
 #endif

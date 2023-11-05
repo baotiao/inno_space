@@ -248,14 +248,13 @@ void ShowRecord(rec_t *rec) {
     printf("\n");
   }
 
-
-  // printf(" %s: %u\n", col_names[3].c_str(), (mach_read_from_4(rec) ^ 0x80000000));
-  // printf("  k: %u\n", (mach_read_from_4(rec + offsets_[5]) ^ 0x80000000));
-  // printf("  c: %.120s\n", rec + offsets_[6]);
-  // printf("pad: %.60s\n", rec + offsets_[7]);
-  // printf("\n");
 }
 
+
+// void ShowCompressInfo(uint32_t page_num) {
+  
+
+// }
 
 void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Index Header:\n");
@@ -271,11 +270,45 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
 
   printf("Number of Directory Slots: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER));
   printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
+  printf("Number of Head Records: %hu\n", page_dir_get_n_heap(read_buf));
   printf("Number of Records: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
   printf("Max Trx id: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_MAX_TRX_ID));
   printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
   printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
+  bool has_symbol_table = (page_header_get_field(read_buf, PAGE_N_HEAP) & PAGE_HAS_SYMBOL_TABLE);
+  if (has_symbol_table) {
+    byte *base_ptr = read_buf + PAGE_NEW_SUPREMUM_END;
+    byte magic = mach_read_from_1(base_ptr + PAGE_SYMBOL_TABLE_MAGIC);
+    if (magic != PAGE_SYMBOL_TABLE_HEADER_MAGIC) {
+      return ;
+    }
+    uint8_t base_type = mach_read_from_1(base_ptr + PAGE_SYMBOL_TABLE_TYPE);
+    uint16_t n_bytes = mach_read_from_2(base_ptr + PAGE_SYMBOL_TABLE_N_BYTES);
+    uint8_t n_slots = mach_read_from_1(base_ptr + PAGE_SYMBOL_TABLE_N_SLOTS);
+    printf("magic %u, base_type %u, n_bytes %hu, n_slots %u\n", magic, base_type, n_bytes, n_slots); 
+    uint16_t prev_page_base_offset = mach_read_from_2(base_ptr + 
+            PAGE_SYMBOL_TABLE_HEADER_SIZE);
+    printf("slot %d, offset %hu, data ", 0, prev_page_base_offset);
+    for (int i = 1; i < n_slots; i++) {
+      uint16_t slot_i_offset = mach_read_from_2(base_ptr + 
+            PAGE_SYMBOL_TABLE_HEADER_SIZE + i * PAGE_SYMBOL_TABLE_SLOT_SIZE);
+      for (uint16_t j = 0; j < (slot_i_offset - prev_page_base_offset); j++) {
+        printf("%c",mach_read_from_1(base_ptr + prev_page_base_offset + j));
+      }
+      prev_page_base_offset = slot_i_offset;
+      printf("\n");
+      printf("slot %d, size %hu, data ", i, slot_i_offset);
+    }
+
+    byte *infi_rec_ptr = read_buf + PAGE_NEW_INFIMUM;
+    ulint first_record_off = mach_read_from_2(infi_rec_ptr - REC_NEXT); 
+    for (uint16_t j = 0; j < (first_record_off - prev_page_base_offset); j++) {
+      printf("%c",mach_read_from_1(base_ptr + prev_page_base_offset + j));
+    }
+    printf("\n");
+  }
+  
   uint16_t page_type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
   if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
     return;
@@ -286,6 +319,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   // printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
   // printf("infimum %d\n", PAGE_NEW_INFIMUM);
   // printf("supremum %d\n", PAGE_NEW_SUPREMUM);
+  return ;
   while (1) {
     printf("\n");
     // offset from previous record
@@ -336,8 +370,8 @@ void ShowBlobFirstPage(uint32_t page_num) {
     printf("ShowBlobFirstPage read error %d\n", ret);
     return;
   }
-  printf("BLOB FLAGS: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_FLAGS));
-  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_LOB_VERSION));
+  printf("BLOB FLAGS: %u\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_FLAGS));
+  printf("BLOB LOB VERSION: %u\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_LOB_VERSION));
   printf("BLOB LAST_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_TRX_ID));
   printf("BLOB LAST_UNDO_NO: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_UNDO_NO));
   printf("BLOB DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_DATA_LEN));
@@ -355,7 +389,7 @@ void ShowBlobIndexPage(uint32_t page_num) {
     return;
   }
 
-  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
+  printf("BLOB LOB VERSION: %u\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
 }
 
 void ShowBlobDataPage(uint32_t page_num) {
@@ -369,7 +403,7 @@ void ShowBlobDataPage(uint32_t page_num) {
     return;
   }
 
-  printf("BLOB LOB VERSION: %d\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
+  printf("BLOB LOB VERSION: %u\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
   printf("BLOB OFFSET_DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobDataPage::OFFSET_DATA_LEN));
   printf("BLOB OFFSET_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobDataPage::OFFSET_TRX_ID));
 }
@@ -1179,8 +1213,8 @@ int main(int argc, char *argv[]) {
     if (strcmp(command, "show-records") == 0) {
       if (sdi_path_opt == false) {
         fprintf(stderr, "Please specify the sdi file path\n");
-        usage();
-        exit(-1);
+        // usage();
+        // exit(-1);
       }
       is_show_records = true;
     }
