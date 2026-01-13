@@ -12,6 +12,18 @@ An intriguing feature of Inno_space is its ability to bypass corrupt pages. In c
 * Supports updating page checksums.
 * **Supports dumping records from .ibd files.**
 
+## Build
+
+```bash
+# Build the project (produces executable named "inno")
+make
+
+# Clean build artifacts
+make clean
+```
+
+**macOS:** If the build fails with `undeclared identifier 'ulong'`, edit `include/my_config.h` and change `#define HAVE_ULONG 1` to `/* #undef HAVE_ULONG */`.
+
 ## Usage
 
 ```shell
