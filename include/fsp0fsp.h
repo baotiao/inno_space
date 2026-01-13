@@ -17,6 +17,12 @@ typedef byte xdes_t;
  * and SDI version(4) at Page 0 */
 #define FSP_SDI_HEADER_LEN 8
 
+/** Offset of SDI root page number in page 0 */
+#define FSP_SDI_ROOT_PAGE_NUM (FSP_HEADER_OFFSET + FSP_HEADER_SIZE)
+
+/** Offset of SDI version in page 0 */
+#define FSP_SDI_VERSION (FSP_SDI_ROOT_PAGE_NUM + 4)
+
 /*			SPACE HEADER
                         ============
 

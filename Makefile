@@ -5,7 +5,7 @@ OBJECT = inno
 SRC_DIR = src
 
 LIB_PATH = -L./
-LIBS =
+LIBS = -lz
 
 INCLUDE_PATH = -I./ \
 							 -I./include/ \

@@ -9,6 +9,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <zlib.h>
 
 #include <sys/stat.h>
 
@@ -32,6 +33,7 @@
 #include "include/page0types.h"
 #include "include/rem0types.h"
 #include "include/rec.h"
+#include "include/ibd2sdi.h"
 
 
 
@@ -128,7 +130,7 @@ void hexDump(void *ptr, size_t size) {
 
   }
   std::cout << std::endl;
-} 
+}
 
 /** TRUE if the record is the supremum record on a page.
  @return true if the supremum record */
@@ -136,98 +138,6 @@ static inline bool page_rec_is_supremum_low(
     ulint offset) /*!< in: record offset on page */
 {
   return (offset == PAGE_NEW_SUPREMUM || offset == PAGE_OLD_SUPREMUM);
-}
-
-int parse_sdi_json(const std::string& json_str) {
-  rapidjson::Document d;
-  d.Parse(json_str.c_str());
-
-  if (d.HasParseError()) {
-    std::cerr << "Failed to parse SDI JSON" << std::endl;
-    return 1;
-  }
-
-  // the sysbench offsets array
-  // offsets[0] 100   // 这个值默认初始化成100, 数组的元素个数, 没用
-  // offsets[1] 6  // 除了默认offsets[0, 1, 2] 三列以后, 剩下的其他列的个数, 是table 里面列的个数+ 2(trx_id 和 rollptr), 从offset[3] 开始
-  // offsets[2] 2147483653  //extra size
-  // offsets[3] 4  // id 这个列
-  // offsets[4] 10  // 根据record format 可以看出, 这个是trx_id
-  // offsets[5] 17  // 根据record format 可以看出, 这个是rollptr
-  // offsets[6] 21 // k 这个列
-  // offsets[7] 141 // c 这个列
-  // offsets[8] 201 // pad 这个列,   201 + offset[2](如果有extra size) 就是整个rec 的大小
-
-  // init offsets array from here
-  memset(offsets_, 0, sizeof(offsets_));
-  offsets_[0] = REC_OFFS_NORMAL_SIZE;
-
-  offsets_[1] = d[1]["object"]["dd_object"]["columns"].Size();
-  // TODO: init extra size
-  offsets_[2] = 0;
-
-  dict_cols.resize(REC_OFFS_NORMAL_SIZE);
-  dict_cols[3].col_name = d[1]["object"]["dd_object"]["columns"][0]["name"].GetString();
-  dict_cols[3].column_type_utf8 = d[1]["object"]["dd_object"]["columns"][0]["column_type_utf8"].GetString();
-  if (dict_cols[3].column_type_utf8 == "int") {
-    offsets_[3] = 4;
-  } else if (dict_cols[3].column_type_utf8.substr(0, 4) == "char") {
-    offsets_[3] = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
-    dict_cols[3].char_length = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
-  } else {
-    return -1;
-  }
-  offsets_[4] = offsets_[3] + 6;
-  offsets_[5] = offsets_[4] + 7;
-
-  for (uint32_t i = 1; i < offsets_[1] - 2; i++) {
-    dict_cols[i + 5].col_name = d[1]["object"]["dd_object"]["columns"][i]["name"].GetString();
-    dict_cols[i + 5].column_type_utf8
-      = d[1]["object"]["dd_object"]["columns"][i]["column_type_utf8"].GetString();
-    if (dict_cols[i + 5].column_type_utf8 == "int") {
-      offsets_[i + 5] = offsets_[i + 4] + 4;
-      dict_cols[i + 5].char_length = 4;
-    } else if (dict_cols[i + 5].column_type_utf8.substr(0, 4) == "char") {
-      dict_cols[i + 5].char_length = d[1]["object"]["dd_object"]["columns"][i]["char_length"].GetInt();
-      offsets_[i + 5] = offsets_[i + 4] + d[1]["object"]["dd_object"]["columns"][i]["char_length"].GetInt();
-    } else {
-      return -1;
-    }
-  }
-  return 0;
-}
-
-int extract_sdi_from_ibd() {
-  // Build command: ibd2sdi <path>
-  char cmd[2048];
-  snprintf(cmd, sizeof(cmd), "ibd2sdi \"%s\" 2>/dev/null", path);
-
-  // Execute and capture output
-  FILE* pipe = popen(cmd, "r");
-  if (!pipe) {
-    std::cerr << "Failed to run ibd2sdi. Make sure it is installed and in PATH." << std::endl;
-    return 1;
-  }
-
-  // Read all output into string
-  std::string json_output;
-  char buffer[4096];
-  while (fgets(buffer, sizeof(buffer), pipe)) {
-    json_output += buffer;
-  }
-
-  int status = pclose(pipe);
-  if (status != 0) {
-    std::cerr << "ibd2sdi failed. Make sure ibd2sdi is installed (comes with MySQL 8.0+)." << std::endl;
-    return 1;
-  }
-
-  if (json_output.empty()) {
-    std::cerr << "ibd2sdi returned empty output." << std::endl;
-    return 1;
-  }
-
-  return parse_sdi_json(json_output);
 }
 
 int rec_init_offsets() {
@@ -266,27 +176,32 @@ void ShowRecord(rec_t *rec) {
                                       REC_INFO_BITS_SHIFT);
   ulint is_min_record = rec_get_bit_field_1(rec, REC_NEW_INFO_BITS, REC_INFO_MIN_REC_FLAG,
                                       REC_INFO_BITS_SHIFT);
-  
-  printf("Info Flags: is_deleted %d is_min_record %d\n", is_delete, is_min_record); 
 
-  printf("%s: ", dict_cols[3].col_name.c_str());
-  if (dict_cols[3].column_type_utf8 == "int") {
-    printf("%u ", (mach_read_from_4(rec) ^ 0x80000000));
-  } else {
-    printf("%.*s", dict_cols[3].char_length, rec);
-  }
-  printf("\n");
+  printf("Info Flags: is_deleted %d is_min_record %d\n", is_delete, is_min_record);
 
-  for (uint32_t i = 1; i < offsets_[1] - 2; i++) {
-    printf("%s: ", dict_cols[i + 5].col_name.c_str());
-    if (dict_cols[i + 5].column_type_utf8 == "int") {
-      printf("%u ", (mach_read_from_4(rec + offsets_[i + 4]) ^ 0x80000000));
+  // offsets_[1] contains total number of columns including system columns
+  // User columns are stored starting at index 3
+  // System columns (DB_TRX_ID, DB_ROLL_PTR) are at the end
+  uint32_t num_user_cols = offsets_[1] - 2;  // Exclude DB_TRX_ID and DB_ROLL_PTR
+
+  for (uint32_t col_idx = 3; col_idx < 3 + num_user_cols; col_idx++) {
+    if (dict_cols[col_idx].col_name.empty()) {
+      continue;  // Skip empty slots
+    }
+
+    printf("%s: ", dict_cols[col_idx].col_name.c_str());
+
+    if (dict_cols[col_idx].column_type_utf8 == "int") {
+      uint32_t int_val = mach_read_from_4(rec + offsets_[col_idx]) ^ 0x80000000;
+      printf("%u ", int_val);
+    } else if (dict_cols[col_idx].column_type_utf8.length() >= 4 &&
+               dict_cols[col_idx].column_type_utf8.substr(0, 4) == "char") {
+      printf("%.*s", dict_cols[col_idx].char_length, rec + offsets_[col_idx]);
     } else {
-      printf("%.*s", dict_cols[i + 5].char_length, rec + offsets_[i + 4]);
+      printf("[unsupported type: %s]", dict_cols[col_idx].column_type_utf8.c_str());
     }
     printf("\n");
   }
-
 }
 
 
@@ -1242,7 +1157,11 @@ int main(int argc, char *argv[]) {
       if (sdi_path_opt) {
         sdi_ret = rec_init_offsets();
       } else {
-        sdi_ret = extract_sdi_from_ibd();
+        std::string json_output;
+        sdi_ret = extract_sdi_from_ibd(fd, json_output);
+        if (sdi_ret == 0) {
+          sdi_ret = parse_sdi_json(json_output);
+        }
       }
       if (sdi_ret != 0) {
         fprintf(stderr, "Failed to load SDI. Use -s to specify SDI file or ensure ibd2sdi is in PATH.\n");
@@ -1262,7 +1181,11 @@ int main(int argc, char *argv[]) {
       if (sdi_path_opt) {
         sdi_ret = rec_init_offsets();
       } else {
-        sdi_ret = extract_sdi_from_ibd();
+        std::string json_output;
+        sdi_ret = extract_sdi_from_ibd(fd, json_output);
+        if (sdi_ret == 0) {
+          sdi_ret = parse_sdi_json(json_output);
+        }
       }
       if (sdi_ret != 0) {
         fprintf(stderr, "Failed to load SDI. Use -s to specify SDI file or ensure ibd2sdi is in PATH.\n");
