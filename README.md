@@ -11,6 +11,7 @@ An intriguing feature of Inno_space is its ability to bypass corrupt pages. In c
 * Provides the capability to remove corrupt pages in .ibd files.
 * Supports updating page checksums.
 * **Supports dumping records from .ibd files.**
+* **Auto-extracts SDI (data dictionary) from .ibd files using ibd2sdi.**
 
 ## Build
 
@@ -34,8 +35,10 @@ usage: inno [-h] [-f test/t.ibd] [-p page_num]
                 -c list-page-type      -- show all page types
                 -c index-summary       -- show indexes information
                 -c show-undo-file      -- show undo log detail
+                -c dump-all-records    -- dump all records (uses ibd2sdi or -s)
         -p page_num       -- show page information
                 -c show-records        -- show all records information
+        -s sdi.json       -- SDI file (optional, uses ibd2sdi if not provided)
         -u page_num       -- update page checksum
         -d page_num       -- delete page
 
@@ -49,14 +52,14 @@ Show undo_001 all rseg information
 ./inno -f ~/git/primary/dbs2250/log/undo_001 -c show-undo-file
 Show specified page information
 ./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10
+Dump all records (auto-extract SDI using ibd2sdi)
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c dump-all-records
+Dump all records (with explicit SDI file)
+./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c dump-all-records -s ./tool/sbtest1.json
 Delete specified page
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2
 Update specified page checksum
 ./inno -f ~/git/primary/dbs2250/test/t1.ibd -u 2
-Show records in specified page
-./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -p 100 -c show-records -s ./tool/sbtest1.json
-Dump all records in .ibd file
-./inno -f ~/git/db8r/dbs2250/sbtest/sbtest1.ibd -c dump-all-records -s ./tool/sbtest1.json
 
 ```
 
