@@ -65,9 +65,11 @@ static void usage()
       "\t-f test/t.ibd     -- ibd file \n"
       "\t\t-c list-page-type      -- show all page type\n"
       "\t\t-c index-summary       -- show indexes information\n"
-      "\t\t-c show-undo-file       -- show undo log file detail\n"
+      "\t\t-c show-undo-file      -- show undo log file detail\n"
+      "\t\t-c dump-all-records    -- dump all records (uses ibd2sdi or -s)\n"
       "\t-p page_num       -- show page information\n"
       "\t\t-c show-records        -- show all records information\n"
+      "\t-s sdi.json       -- SDI file (optional, uses ibd2sdi if not provided)\n"
       "\t-u page_num       -- update page checksum\n"
       "\t-d page_num       -- delete page \n"
       "Example: \n"
@@ -80,6 +82,10 @@ static void usage()
       "./inno -f ~/git/primary/dbs2250/log/undo_001 -c show-undo-file\n"
       "Show specify page information\n"
       "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -p 10\n"
+      "Dump all records (auto-extract SDI using ibd2sdi)\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c dump-all-records\n"
+      "Dump all records (with explicit SDI file)\n"
+      "./inno -f ~/git/primary/dbs2250/sbtest/sbtest1.ibd -c dump-all-records -s sbtest1.json\n"
       "Delete specify page\n"
       "./inno -f ~/git/primary/dbs2250/test/t1.ibd -d 2\n"
       "Update specify page checksum\n"
@@ -132,31 +138,14 @@ static inline bool page_rec_is_supremum_low(
   return (offset == PAGE_NEW_SUPREMUM || offset == PAGE_OLD_SUPREMUM);
 }
 
-int rec_init_offsets() {
-  // Open the file for reading
-  std::ifstream file(sdi_path);
+int parse_sdi_json(const std::string& json_str) {
+  rapidjson::Document d;
+  d.Parse(json_str.c_str());
 
-  // Check if the file is open
-  if (!file.is_open()) {
-    std::cerr << "Failed to open json the file." << std::endl;
+  if (d.HasParseError()) {
+    std::cerr << "Failed to parse SDI JSON" << std::endl;
     return 1;
   }
-
-  // Create a string to store the file contents
-  std::string file_contents;
-
-  // Read the file and append its contents to the string
-  std::string line;
-  while (std::getline(file, line)) {
-    file_contents += line + '\n';
-  }
-
-  // std::cout << file_contents;
-  // Close the file
-  file.close();
-
-  rapidjson::Document d;
-  d.Parse(file_contents.c_str());
 
   // the sysbench offsets array
   // offsets[0] 100   // 这个值默认初始化成100, 数组的元素个数, 没用
@@ -165,13 +154,11 @@ int rec_init_offsets() {
   // offsets[3] 4  // id 这个列
   // offsets[4] 10  // 根据record format 可以看出, 这个是trx_id
   // offsets[5] 17  // 根据record format 可以看出, 这个是rollptr
-  // offsets[6] 21 // k 这个列 
+  // offsets[6] 21 // k 这个列
   // offsets[7] 141 // c 这个列
   // offsets[8] 201 // pad 这个列,   201 + offset[2](如果有extra size) 就是整个rec 的大小
 
-  
   // init offsets array from here
-  // previous code parse the json file
   memset(offsets_, 0, sizeof(offsets_));
   offsets_[0] = REC_OFFS_NORMAL_SIZE;
 
@@ -183,7 +170,7 @@ int rec_init_offsets() {
   dict_cols[3].col_name = d[1]["object"]["dd_object"]["columns"][0]["name"].GetString();
   dict_cols[3].column_type_utf8 = d[1]["object"]["dd_object"]["columns"][0]["column_type_utf8"].GetString();
   if (dict_cols[3].column_type_utf8 == "int") {
-    offsets_[3] = 4; 
+    offsets_[3] = 4;
   } else if (dict_cols[3].column_type_utf8.substr(0, 4) == "char") {
     offsets_[3] = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
     dict_cols[3].char_length = d[1]["object"]["dd_object"]["columns"][0]["char_length"].GetInt();
@@ -208,6 +195,64 @@ int rec_init_offsets() {
     }
   }
   return 0;
+}
+
+int extract_sdi_from_ibd() {
+  // Build command: ibd2sdi <path>
+  char cmd[2048];
+  snprintf(cmd, sizeof(cmd), "ibd2sdi \"%s\" 2>/dev/null", path);
+
+  // Execute and capture output
+  FILE* pipe = popen(cmd, "r");
+  if (!pipe) {
+    std::cerr << "Failed to run ibd2sdi. Make sure it is installed and in PATH." << std::endl;
+    return 1;
+  }
+
+  // Read all output into string
+  std::string json_output;
+  char buffer[4096];
+  while (fgets(buffer, sizeof(buffer), pipe)) {
+    json_output += buffer;
+  }
+
+  int status = pclose(pipe);
+  if (status != 0) {
+    std::cerr << "ibd2sdi failed. Make sure ibd2sdi is installed (comes with MySQL 8.0+)." << std::endl;
+    return 1;
+  }
+
+  if (json_output.empty()) {
+    std::cerr << "ibd2sdi returned empty output." << std::endl;
+    return 1;
+  }
+
+  return parse_sdi_json(json_output);
+}
+
+int rec_init_offsets() {
+  // Open the file for reading
+  std::ifstream file(sdi_path);
+
+  // Check if the file is open
+  if (!file.is_open()) {
+    std::cerr << "Failed to open json the file." << std::endl;
+    return 1;
+  }
+
+  // Create a string to store the file contents
+  std::string file_contents;
+
+  // Read the file and append its contents to the string
+  std::string line;
+  while (std::getline(file, line)) {
+    file_contents += line + '\n';
+  }
+
+  // Close the file
+  file.close();
+
+  return parse_sdi_json(file_contents);
 }
 
 void ShowRecord(rec_t *rec) {
@@ -305,8 +350,8 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   if (page_type != FIL_PAGE_INDEX || is_show_records == false) {
     return;
   }
-  
-  rec_init_offsets();
+
+  // SDI is loaded in main() before calling this function
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
   // printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
   // printf("infimum %d\n", PAGE_NEW_INFIMUM);
@@ -1195,6 +1240,18 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(command, "show-undo-file") == 0) {
       ShowUndoFile();
     } else if (strcmp(command, "dump-all-records") == 0) {
+      // Load SDI: from file if -s provided, otherwise extract from ibd
+      int sdi_ret;
+      if (sdi_path_opt) {
+        sdi_ret = rec_init_offsets();
+      } else {
+        sdi_ret = extract_sdi_from_ibd();
+      }
+      if (sdi_ret != 0) {
+        fprintf(stderr, "Failed to load SDI. Use -s to specify SDI file or ensure ibd2sdi is in PATH.\n");
+        close(fd);
+        exit(-1);
+      }
       DumpAllRecords();
     }
   } else {
@@ -1203,10 +1260,17 @@ int main(int argc, char *argv[]) {
     // PrintUserRecord(user_page, &type);
     printf("\n");
     if (strcmp(command, "show-records") == 0) {
-      if (sdi_path_opt == false) {
-        fprintf(stderr, "Please specify the sdi file path\n");
-        // usage();
-        // exit(-1);
+      // Load SDI: from file if -s provided, otherwise extract from ibd
+      int sdi_ret;
+      if (sdi_path_opt) {
+        sdi_ret = rec_init_offsets();
+      } else {
+        sdi_ret = extract_sdi_from_ibd();
+      }
+      if (sdi_ret != 0) {
+        fprintf(stderr, "Failed to load SDI. Use -s to specify SDI file or ensure ibd2sdi is in PATH.\n");
+        close(fd);
+        exit(-1);
       }
       is_show_records = true;
     }
