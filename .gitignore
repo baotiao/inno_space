@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+inno
+
+# Editor/IDE
+tags
+.claude/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
