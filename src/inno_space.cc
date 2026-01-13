@@ -21,6 +21,7 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 
+#include "include/my_inttypes.h"
 #include "include/fil0fil.h"
 #include "include/page0page.h"
 #include "include/ut0crc32.h"

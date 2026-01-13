@@ -242,9 +242,9 @@ class File_segment_inode {
    @param[in]   inode     File segment inode pointer */
   File_segment_inode(space_id_t space_id,
                      fseg_inode_t *inode)
-      : m_space_id(space_id),
-        m_fseg_inode(inode)
+      : m_fseg_inode(inode)
   {
+    (void)space_id;
   }
 
   /** Get the current value of FSEG_NOT_FULL_N_USED.
@@ -258,9 +258,6 @@ class File_segment_inode {
   }
 
  private:
-  /** Unique tablespace identifier */
-  space_id_t m_space_id;
-
   /** file segment inode pointer that is being wrapped by this object. */
   fseg_inode_t *m_fseg_inode;
 };

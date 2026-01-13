@@ -175,7 +175,7 @@
 #define SIZEOF_LONG_LONG 8
 #define SIZEOF_OFF_T     8
 #define SIZEOF_TIME_T    8
-#define HAVE_ULONG 1
+/* #undef HAVE_ULONG */
 #define HAVE_U_INT32_T 1
 
 /* Support for tagging symbols with __attribute__((visibility("hidden"))) */
