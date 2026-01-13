@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -107,10 +108,10 @@ void ShowFILHeader(uint32_t page_num, uint16_t* type) {
   printf("Page number: %u\n", mach_read_from_4(read_buf + FIL_PAGE_OFFSET));
   printf("Previous Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_PREV));
   printf("Next Page: %u\n", mach_read_from_4(read_buf + FIL_PAGE_NEXT));
-  printf("Page LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_LSN));
+  printf("Page LSN: %" PRIu64 "\n", mach_read_from_8(read_buf + FIL_PAGE_LSN));
   *type = mach_read_from_2(read_buf + FIL_PAGE_TYPE);
   printf("Page Type: %hu\n", *type);
-  printf("Flush LSN: %lu\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
+  printf("Flush LSN: %" PRIu64 "\n", mach_read_from_8(read_buf + FIL_PAGE_FILE_FLUSH_LSN));
 }
 
 void hexDump(void *ptr, size_t size) {
@@ -129,14 +130,6 @@ static inline bool page_rec_is_supremum_low(
     ulint offset) /*!< in: record offset on page */
 {
   return (offset == PAGE_NEW_SUPREMUM || offset == PAGE_OLD_SUPREMUM);
-}
-
-/** TRUE if the record is the infimum record on a page.
- @return true if the infimum record */
-static inline bool page_rec_is_infimum_low(
-    ulint offset) /*!< in: record offset on page */
-{
-  return (offset == PAGE_NEW_INFIMUM || offset == PAGE_OLD_INFIMUM);
 }
 
 int rec_init_offsets() {
@@ -273,9 +266,9 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
   printf("Garbage Space: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_GARBAGE));
   printf("Number of Head Records: %hu\n", page_dir_get_n_heap(read_buf));
   printf("Number of Records: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_N_RECS));
-  printf("Max Trx id: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_MAX_TRX_ID));
+  printf("Max Trx id: %" PRIu64 "\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_MAX_TRX_ID));
   printf("Page level: %hu\n", mach_read_from_2(read_buf + PAGE_HEADER + PAGE_LEVEL));
-  printf("Index ID: %lu\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
+  printf("Index ID: %" PRIu64 "\n", mach_read_from_8(read_buf + PAGE_HEADER + PAGE_INDEX_ID));
 
   bool has_symbol_table = (page_header_get_field(read_buf, PAGE_N_HEAP) & PAGE_HAS_SYMBOL_TABLE);
   if (has_symbol_table) {
@@ -371,10 +364,10 @@ void ShowBlobFirstPage(uint32_t page_num) {
   }
   printf("BLOB FLAGS: %u\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_FLAGS));
   printf("BLOB LOB VERSION: %u\n", mach_read_from_1(read_buf + (ulint)BlobFirstPage::OFFSET_LOB_VERSION));
-  printf("BLOB LAST_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_TRX_ID));
+  printf("BLOB LAST_TRX_ID: %" PRIu64 "\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_TRX_ID));
   printf("BLOB LAST_UNDO_NO: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_LAST_UNDO_NO));
   printf("BLOB DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobFirstPage::OFFSET_DATA_LEN));
-  printf("BLOB TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_TRX_ID));
+  printf("BLOB TRX_ID: %" PRIu64 "\n", mach_read_from_6(read_buf + (ulint)BlobFirstPage::OFFSET_TRX_ID));
 }
 
 void ShowBlobIndexPage(uint32_t page_num) {
@@ -404,7 +397,7 @@ void ShowBlobDataPage(uint32_t page_num) {
 
   printf("BLOB LOB VERSION: %u\n", mach_read_from_1(read_buf + (ulint)BlobDataPage::OFFSET_VERSION));
   printf("BLOB OFFSET_DATA_LEN: %u\n", mach_read_from_4(read_buf + (ulint)BlobDataPage::OFFSET_DATA_LEN));
-  printf("BLOB OFFSET_TRX_ID: %lu\n", mach_read_from_6(read_buf + (ulint)BlobDataPage::OFFSET_TRX_ID));
+  printf("BLOB OFFSET_TRX_ID: %" PRIu64 "\n", mach_read_from_6(read_buf + (ulint)BlobDataPage::OFFSET_TRX_ID));
 }
 
 void ShowUndoPageHeader(uint32_t page_num) {
@@ -472,7 +465,7 @@ void ShowFile() {
     printf("ShowFile read error %d\n", ret);
     return;
   }
-  printf("File size %lu\n", stat_buf.st_size);
+  printf("File size %lld\n", (long long)stat_buf.st_size);
 
   int block_num = stat_buf.st_size / kPageSize;
   uint16_t type = 0;
@@ -510,8 +503,8 @@ void ShowUndoLogHdr(uint32_t page_num, uint32_t page_offset)
 
   byte *undo_log_hdr = read_buf + page_offset;
 
-  printf("trx id: %lu\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_ID));
-  printf("trx no: %lu\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_NO));
+  printf("trx id: %" PRIu64 "\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_ID));
+  printf("trx no: %" PRIu64 "\n", mach_read_from_8(undo_log_hdr + TRX_UNDO_TRX_NO));
   printf("del marks: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_DEL_MARKS));
   printf("undo log start: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_LOG_START));
   printf("next undo log header: %hu\n", mach_read_from_2(undo_log_hdr + TRX_UNDO_NEXT_LOG));
@@ -570,7 +563,7 @@ void ShowUndoFile() {
     return;
   }
   int block_num = stat_buf.st_size / kPageSize;
-  printf("Undo File size %ld, blocks %d\n", stat_buf.st_size, block_num);
+  printf("Undo File size %lld, blocks %d\n", (long long)stat_buf.st_size, block_num);
 
   uint32_t rseg_array[TRX_SYS_N_RSEGS];
   uint16_t type = 0;
@@ -793,7 +786,7 @@ void ShowSpacePageType() {
     printf("ShowFile read error %d\n", ret);
     return ;
   }
-  printf("File size %lu\n", stat_buf.st_size);
+  printf("File size %lld\n", (long long)stat_buf.st_size);
 
   int block_num = stat_buf.st_size / kPageSize;
 
@@ -843,7 +836,7 @@ void ShowSpaceHeader() {
   printf("Highest Page number: %u\n", mach_read_from_4(header + FSP_SIZE));
   printf("Free limit Page Number: %u\n", mach_read_from_4(header + FSP_FREE_LIMIT));
   printf("FREE_FRAG page number: %u\n", mach_read_from_4(header + FSP_FRAG_N_USED));
-  printf("Next Seg ID: %lu\n", mach_read_from_8(header + FSP_SEG_ID));
+  printf("Next Seg ID: %" PRIu64 "\n", mach_read_from_8(header + FSP_SEG_ID));
 
 }
 /** Checks a file segment header within a B-tree root page.
@@ -952,7 +945,7 @@ static void fseg_print_low(space_id_t space_id,
   n_not_full = flst_get_len(inode + FSEG_NOT_FULL);
   n_full = flst_get_len(inode + FSEG_FULL);
 
-  printf("SEGMENT id %lu, space id %u\n", seg_id, space);
+  printf("SEGMENT id %" PRIu64 ", space id %u\n", seg_id, space);
   printf("Extents information:\n");
   printf("FULL extent list size %u\n", n_full);
   printf("FREE extent list size %u\n", n_free);
@@ -1039,10 +1032,10 @@ void ShowIndexSummary() {
   }
 
   printf("**Suggestion**\n");
-  printf("File size %lu, reserved but not used space %lu, percentage %.2lf%%\n", 
-      stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
+  printf("File size %lld, reserved but not used space %" PRIu64 ", percentage %.2lf%%\n",
+      (long long)stat_buf.st_size, (uint64_t)total_free_page * (uint64_t)kPageSize,
       (double)total_free_page * (double)kPageSize * 100.00 / stat_buf.st_size);
-  printf("Optimize table will get new fie size %lu\n", stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
+  printf("Optimize table will get new fie size %" PRIu64 "\n", (uint64_t)stat_buf.st_size - (uint64_t)total_free_page * (uint64_t)kPageSize);
 
   return;
 }
