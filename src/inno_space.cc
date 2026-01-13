@@ -353,10 +353,7 @@ void ShowIndexHeader(uint32_t page_num, bool is_show_records) {
 
   // SDI is loaded in main() before calling this function
   byte *rec_ptr = read_buf + PAGE_NEW_INFIMUM;
-  // printf("page_rec_is_infimum_low %d page_rec_is_supremum_low %d\n", page_rec_is_infimum_low(PAGE_NEW_INFIMUM), page_rec_is_supremum_low(PAGE_NEW_SUPREMUM));
-  // printf("infimum %d\n", PAGE_NEW_INFIMUM);
-  // printf("supremum %d\n", PAGE_NEW_SUPREMUM);
-  return ;
+
   while (1) {
     printf("\n");
     // offset from previous record
